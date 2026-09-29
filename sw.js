@@ -1,13 +1,30 @@
-const CACHE="trigger3d-v1";
-const APP=["./","./index.html","./styles.css","./app.js","./data.js","./manifest.webmanifest","./icons/icon.svg"];
-self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(APP))));
-self.addEventListener("activate",e=>e.waitUntil(self.clients.claim()));
-self.addEventListener("fetch",e=>{
-  e.respondWith(caches.match(e.request).then(hit=>hit||fetch(e.request).then(res=>{
-    if(e.request.method==="GET" && res.ok){
-      const copy=res.clone();
-      caches.open(CACHE).then(c=>c.put(e.request,copy));
-    }
-    return res;
-  }).catch(()=>hit)));
+const CACHE="trigger3d-v2";
+const APP=["./","./index.html","./styles.css?v=2","./app.js?v=2","./data.js","./manifest.webmanifest","./icons/icon.svg"];
+
+self.addEventListener("install",event=>{
+  self.skipWaiting();
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(APP)));
+});
+
+self.addEventListener("activate",event=>{
+  event.waitUntil(
+    caches.keys()
+      .then(keys=>Promise.all(keys.filter(key=>key!==CACHE).map(key=>caches.delete(key))))
+      .then(()=>self.clients.claim())
+  );
+});
+
+self.addEventListener("fetch",event=>{
+  if(event.request.method!=="GET") return;
+  event.respondWith(
+    fetch(event.request)
+      .then(response=>{
+        if(response && response.ok){
+          const copy=response.clone();
+          caches.open(CACHE).then(cache=>cache.put(event.request,copy));
+        }
+        return response;
+      })
+      .catch(()=>caches.match(event.request))
+  );
 });
