@@ -67,3 +67,14 @@ L'application se lancera alors comme une application classique.
 ## Licence
 
 Le code du prototype est destiné au projet Trigger3D. Les modèles anatomiques externes éventuellement intégrés devront conserver leurs licences et attributions propres.
+
+
+## Modèle anatomique 3D
+
+Le modèle musculaire utilisé par Trigger3D est dérivé de **Z-Anatomy** et **BodyParts3D**.
+
+Attributions :
+- Z-Anatomy — The libre 3D atlas of anatomy — CC BY-SA 4.0
+- BodyParts3D — The Database Center for Life Science — CC BY-SA 2.1 Japan
+
+Les actifs anatomiques dérivés restent soumis aux obligations d'attribution et de partage dans les mêmes conditions applicables à leurs licences.
