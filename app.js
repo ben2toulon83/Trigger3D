@@ -12,6 +12,11 @@ const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 viewer.appendChild(renderer.domElement);
+const statusEl = document.querySelector("#jsStatus");
+if (statusEl) {
+  statusEl.textContent = "3D chargée";
+  statusEl.classList.add("ok");
+}
 
 scene.add(new THREE.HemisphereLight(0xbfdcff, 0x14172a, 2.1));
 const key = new THREE.DirectionalLight(0xffffff, 2.5);
@@ -30,7 +35,7 @@ const muscle = new THREE.MeshStandardMaterial({ color: 0xa9343e, roughness: .62 
 const darkMuscle = new THREE.MeshStandardMaterial({ color: 0x732932, roughness: .7 });
 
 function capsule(r, l, material = muscle) {
-  const g = new THREE.CapsuleGeometry(r, l, 8, 16);
+  const g = new THREE.CylinderGeometry(r, r, l + r * 2, 24, 1, false);
   return new THREE.Mesh(g, material);
 }
 function sphere(rx, ry, rz, material = muscle) {
