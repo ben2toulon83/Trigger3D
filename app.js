@@ -126,7 +126,17 @@ loader.load(MODEL_URL,gltf=>{
     if(o.isMesh){
       anatomyMeshes.push(o);
       o.material=o.material.clone();
-      o.material.roughness=Math.max(.45,o.material.roughness ?? .55);
+      const nn=norm(o.name || o.userData?.za_name || "");
+      o.material.roughness=Math.max(.48,o.material.roughness ?? .55);
+      if ("color" in o.material) {
+        if (/(tendon|aponeuros|fascia)/.test(nn)) {
+          o.material.color.set(0xd9c7a3);
+        } else if (/(bone|osseous|skeleton)/.test(nn)) {
+          o.material.color.set(0xe8dfcc);
+        } else {
+          o.material.color.set(0xa9404d);
+        }
+      }
       o.userData.originalMaterial=o.material.clone();
     }
   });
@@ -151,15 +161,27 @@ function rebuildMarkers(){
     if(matched.length){
       const box=new THREE.Box3();
       matched.forEach(m=>box.expandByObject(m));
-      box.getCenter(pos);
+      const center=new THREE.Vector3(), size=new THREE.Vector3();
+      box.getCenter(center); box.getSize(size);
+      pos.copy(center);
+
+      // Put the marker toward the outer surface rather than inside the muscle.
+      const sideSign = p.side === "gauche" ? -1 : 1;
+      const muscleName = norm(p.muscle);
+      if (/(pector|sternocleid|masseter|tibial)/.test(muscleName)) pos.z += Math.max(.015,size.z*.48);
+      else if (/(trapez|supra|infra|levator|quadratus|glute|piriform|ischio|gastro)/.test(muscleName)) pos.z -= Math.max(.015,size.z*.48);
+      pos.x += sideSign * Math.min(size.x*.10,.025);
+
+      // Small deterministic vertical offset keeps nearby markers readable.
+      const offset = ((i % 3) - 1) * Math.min(size.y*.08,.025);
+      pos.y += offset;
     }
     const mesh=new THREE.Mesh(
-      new THREE.SphereGeometry(.045,18,12),
-      new THREE.MeshStandardMaterial({color:0xff4c62,emissive:0x8f0d1f,emissiveIntensity:1.5,depthTest:false})
+      new THREE.SphereGeometry(.020,18,12),
+      new THREE.MeshStandardMaterial({color:0xff3150,emissive:0x7a0718,emissiveIntensity:1.25,depthTest:true,depthWrite:true})
     );
     mesh.position.copy(pos);
     mesh.userData.point=p;
-    mesh.renderOrder=20;
     markerRoot.add(mesh);
     markerMeshes.push(mesh);
   });
@@ -168,17 +190,30 @@ function rebuildMarkers(){
 
 function resetHighlights(){
   anatomyMeshes.forEach(m=>{
-    if(m.userData.originalMaterial) m.material=m.userData.originalMaterial.clone();
+    if(m.userData.originalMaterial) {
+      m.material=m.userData.originalMaterial.clone();
+      m.material.transparent=false;
+      m.material.opacity=1;
+      m.material.depthWrite=true;
+    }
   });
   selectedMuscleMeshes=[];
 }
 function highlightMeshes(meshes){
   resetHighlights();
   selectedMuscleMeshes=meshes;
-  meshes.forEach(m=>{
+  const set=new Set(meshes);
+  anatomyMeshes.forEach(m=>{
     const mat=m.material.clone();
-    if("emissive" in mat){ mat.emissive=new THREE.Color(0x4d0b17); mat.emissiveIntensity=1.2; }
-    if("color" in mat) mat.color.offsetHSL(0,.08,.08);
+    if(set.has(m)){
+      if("emissive" in mat){ mat.emissive=new THREE.Color(0x5b0a1a); mat.emissiveIntensity=1.0; }
+      if("color" in mat) mat.color.set(0xd65061);
+      mat.transparent=false; mat.opacity=1;
+    } else {
+      mat.transparent=true;
+      mat.opacity=.22;
+      mat.depthWrite=false;
+    }
     m.material=mat;
   });
 }
@@ -186,10 +221,10 @@ function focusOnMeshes(meshes){
   if(!meshes.length) return;
   const box=new THREE.Box3();
   meshes.forEach(m=>box.expandByObject(m));
-  const center=new THREE.Vector3(); const size=new THREE.Vector3();
-  box.getCenter(center); box.getSize(size);
-  cameraTargetGoal.copy(center);
-  cameraDistanceGoal=Math.max(.75,Math.min(2.8,Math.max(size.x,size.y,size.z)*3.1));
+  const sphere=new THREE.Sphere();
+  box.getBoundingSphere(sphere);
+  cameraTargetGoal.copy(sphere.center);
+  cameraDistanceGoal=Math.max(.55,Math.min(2.25,sphere.radius*3.0));
   highlightMeshes(meshes);
 }
 function focusPoint(point){
@@ -313,7 +348,7 @@ function animate(){
   rotX+=(targetRotX-rotX)*.1; rotY+=(targetRotY-rotY)*.1; anatomyRoot.rotation.set(rotX,rotY,0);
   cameraTarget.lerp(cameraTargetGoal,.1); cameraDistance+=(cameraDistanceGoal-cameraDistance)*.1;
   camera.position.set(cameraTarget.x,cameraTarget.y,cameraTarget.z+cameraDistance); camera.lookAt(cameraTarget);
-  markerMeshes.forEach((m,i)=>{const s=1+Math.sin(performance.now()/430+i)*.08;m.scale.setScalar(s);});
+  markerMeshes.forEach((m,i)=>{const s=1+Math.sin(performance.now()/520+i)*.045;m.scale.setScalar(s);});
   renderer.render(scene,camera);
 }
 animate();
