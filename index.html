@@ -10,7 +10,7 @@
   <title>Trigger3D</title>
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="./styles.css?v=3" />
+  <link rel="stylesheet" href="./styles.css?v=4" />
 </head>
 <body>
   <header class="topbar">
@@ -24,6 +24,7 @@
   <main class="layout">
     <section class="viewer-card">
       <div id="viewer"></div>
+      <div id="jsStatus" style="position:absolute;right:18px;top:18px;z-index:8;padding:8px 10px;border-radius:10px;background:rgba(10,15,29,.82);border:1px solid rgba(255,255,255,.12);font-size:12px;color:#f59e0b">Chargement 3D…</div>
 
       <div class="viewer-tools">
         <button data-view="front">Face</button>
@@ -99,6 +100,22 @@
     </aside>
   </main>
 
-  <script type="module" src="./app.js?v=3"></script>
+  <script>
+    window.addEventListener("error", function(e) {
+      var s = document.getElementById("jsStatus");
+      if (s) {
+        s.textContent = "Erreur 3D : " + (e.message || "chargement impossible");
+        s.style.color = "#ff6b6b";
+      }
+    });
+    window.addEventListener("unhandledrejection", function(e) {
+      var s = document.getElementById("jsStatus");
+      if (s) {
+        s.textContent = "Erreur module 3D";
+        s.style.color = "#ff6b6b";
+      }
+    });
+  </script>
+  <script type="module" src="./app.js?v=4"></script>
 </body>
 </html>
