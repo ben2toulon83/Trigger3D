@@ -18,22 +18,31 @@ button{cursor:pointer}
 .topbar{height:76px;padding:14px max(18px,env(safe-area-inset-left));display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid rgba(255,255,255,.08);background:rgba(5,8,18,.86);backdrop-filter:blur(14px);position:sticky;top:0;z-index:20}
 .brand{font-size:22px;font-weight:800;letter-spacing:.2px}
 .subtitle{font-size:12px;color:var(--muted);margin-top:3px}
-.layout{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(320px,.8fr);min-height:calc(100vh - 76px)}
+.layout{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(360px,.8fr);min-height:calc(100vh - 76px)}
 .viewer-card{position:relative;min-height:calc(100vh - 76px);overflow:hidden}
-#viewer{position:absolute;inset:0;background:radial-gradient(circle at 50% 34%,#16233f 0,#080d19 52%,#05070f 100%)}
+#viewer{position:absolute;inset:0;background:radial-gradient(circle at 50% 34%,#1d2b4d 0,#0a1327 52%,#05070f 100%)}
 .viewer-tools{position:absolute;left:50%;transform:translateX(-50%);bottom:24px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:8px;background:rgba(8,12,23,.74);border:1px solid rgba(255,255,255,.09);border-radius:16px;backdrop-filter:blur(12px)}
-.viewer-tools button,.ghost,.tab,.chip{border:1px solid var(--border);color:var(--text);background:#111a2d;border-radius:10px;padding:9px 12px}
-.viewer-tools button:hover,.ghost:hover,.tab:hover,.chip:hover{border-color:#42557f;background:#16213a}
+.viewer-tools button,.ghost,.tab,.chip,.small{border:1px solid var(--border);color:var(--text);background:#111a2d;border-radius:10px;padding:9px 12px}
+.viewer-tools button:hover,.ghost:hover,.tab:hover,.chip:hover,.small:hover{border-color:#42557f;background:#16213a}
 .legend{position:absolute;top:18px;left:18px;display:flex;gap:14px;color:#d9e2f5;font-size:12px;padding:9px 11px;background:rgba(8,12,23,.72);border:1px solid rgba(255,255,255,.08);border-radius:12px;backdrop-filter:blur(10px)}
+.quick-toggles{position:absolute;top:18px;right:18px;display:flex;gap:8px;z-index:6}
+.small{padding:8px 10px;font-size:12px}
+.small.active{background:#123451;border-color:#38bdf8}
 .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
 .dot.trigger{background:var(--danger);box-shadow:0 0 12px #ff5a67}
 .dot.pain{background:var(--pain);box-shadow:0 0 12px #f59e0b}
+.status-badge{position:absolute;right:18px;top:58px;z-index:8;padding:8px 10px;border-radius:10px;background:rgba(10,15,29,.82);border:1px solid rgba(255,255,255,.12);font-size:12px;color:#f59e0b}
+.status-badge.ok{color:#86efac}
 .panel{background:rgba(10,15,29,.96);border-left:1px solid rgba(255,255,255,.09);padding:20px;overflow:auto;max-height:calc(100vh - 76px)}
 .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:22px}
 .tab{padding:10px 8px;color:var(--muted)}
 .tab.active{background:#17233d;color:#fff;border-color:#41618d}
 .tab-panel{display:none}
 .tab-panel.active{display:block}
+.stats-row{display:flex;gap:10px;margin-bottom:12px}
+.stat-box{flex:1;padding:12px 14px;border:1px solid var(--border);border-radius:14px;background:var(--panel2);display:flex;flex-direction:column;align-items:flex-start}
+.stat-box strong{font-size:24px}
+.stat-box span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
 .empty-state{padding:28px 8px;text-align:center;color:var(--muted)}
 .empty-state h2,.detail-card h2,.tab-panel h2{color:#fff}
 .eyebrow{font-size:11px;letter-spacing:.14em;color:var(--accent);font-weight:700}
@@ -43,6 +52,8 @@ button{cursor:pointer}
 .info-grid h3{margin:0 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#c8d3e9}
 .info-grid p{margin:0;color:#e7ecf8;line-height:1.5;font-size:14px}
 .primary{width:100%;border:0;border-radius:12px;padding:12px 14px;background:linear-gradient(135deg,#38bdf8,#2563eb);color:white;font-weight:700}
+.action-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.action-ghost{width:100%}
 .chip-grid{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 18px}
 .chip.active{border-color:var(--accent2);background:#123451}
 .results{display:grid;gap:9px}
@@ -61,4 +72,6 @@ button{cursor:pointer}
   .viewer-tools{bottom:12px;width:calc(100% - 20px)}
   .viewer-tools button{padding:8px 9px;font-size:12px}
   .legend{top:10px;left:10px}
+  .quick-toggles{right:10px;top:10px;flex-direction:column}
+  .status-badge{top:82px;right:10px}
 }

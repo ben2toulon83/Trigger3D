@@ -7,10 +7,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="Trigger3D" />
-  <title>Trigger3D</title>
+  <title>Trigger3D V2</title>
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="./styles.css?v=4" />
+  <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
   <header class="topbar">
@@ -24,7 +24,17 @@
   <main class="layout">
     <section class="viewer-card">
       <div id="viewer"></div>
-      <div id="jsStatus" style="position:absolute;right:18px;top:18px;z-index:8;padding:8px 10px;border-radius:10px;background:rgba(10,15,29,.82);border:1px solid rgba(255,255,255,.12);font-size:12px;color:#f59e0b">Chargement 3D…</div>
+      <div id="jsStatus" class="status-badge">Chargement 3D…</div>
+
+      <div class="legend">
+        <span><i class="dot trigger"></i> Point gâchette</span>
+        <span><i class="dot pain"></i> Zone projetée</span>
+      </div>
+
+      <div class="quick-toggles">
+        <button id="showAllPoints" class="small">Tous les points</button>
+        <button id="focusSelection" class="small">Focus sélection</button>
+      </div>
 
       <div class="viewer-tools">
         <button data-view="front">Face</button>
@@ -32,11 +42,6 @@
         <button data-view="left">Profil G</button>
         <button data-view="right">Profil D</button>
         <button id="resetView">Réinitialiser</button>
-      </div>
-
-      <div class="legend">
-        <span><i class="dot trigger"></i> Point gâchette</span>
-        <span><i class="dot pain"></i> Zone projetée</span>
       </div>
     </section>
 
@@ -48,9 +53,14 @@
       </div>
 
       <section id="tab-explore" class="tab-panel active">
+        <div class="stats-row">
+          <div class="stat-box"><strong id="statPoints">0</strong><span>points</span></div>
+          <div class="stat-box"><strong id="statMuscles">0</strong><span>muscles</span></div>
+        </div>
+
         <div id="emptyState" class="empty-state">
           <h2>Sélectionne un point</h2>
-          <p>Fais tourner le corps, zoome puis touche une pastille rouge.</p>
+          <p>Fais tourner le corps, zoome puis clique sur une pastille rouge.</p>
         </div>
 
         <article id="detailCard" class="detail-card" hidden>
@@ -77,19 +87,22 @@
             </div>
           </div>
 
-          <button id="togglePain" class="primary">Afficher la zone projetée</button>
+          <div class="action-grid">
+            <button id="togglePain" class="primary">Afficher la zone projetée</button>
+            <button id="showMusclePoints" class="ghost action-ghost">Afficher les points du muscle</button>
+          </div>
         </article>
       </section>
 
       <section id="tab-pain" class="tab-panel">
         <h2>Où as-tu mal ?</h2>
-        <p class="muted">Choisis une zone. L’application affiche des muscles pouvant être associés à cette région.</p>
+        <p class="muted">Choisis une zone. L’application affiche les muscles potentiellement associés.</p>
         <div id="painButtons" class="chip-grid"></div>
         <div id="painResults" class="results"></div>
       </section>
 
       <section id="tab-library" class="tab-panel">
-        <h2>Bibliothèque</h2>
+        <h2>Bibliothèque des muscles</h2>
         <div id="muscleList" class="results"></div>
       </section>
 
@@ -100,22 +113,6 @@
     </aside>
   </main>
 
-  <script>
-    window.addEventListener("error", function(e) {
-      var s = document.getElementById("jsStatus");
-      if (s) {
-        s.textContent = "Erreur 3D : " + (e.message || "chargement impossible");
-        s.style.color = "#ff6b6b";
-      }
-    });
-    window.addEventListener("unhandledrejection", function(e) {
-      var s = document.getElementById("jsStatus");
-      if (s) {
-        s.textContent = "Erreur module 3D";
-        s.style.color = "#ff6b6b";
-      }
-    });
-  </script>
-  <script type="module" src="./app.js?v=4"></script>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>

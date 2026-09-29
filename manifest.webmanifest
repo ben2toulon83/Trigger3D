@@ -1,13 +1,13 @@
 {
-  "name":"Trigger3D – Points gâchettes",
-  "short_name":"Trigger3D",
-  "description":"Exploration interactive 3D de points gâchettes musculaires.",
-  "start_url":"./",
-  "display":"standalone",
-  "background_color":"#060914",
-  "theme_color":"#0b1020",
-  "lang":"fr-FR",
-  "icons":[
-    {"src":"./icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  "name": "Trigger3D – Points gâchettes",
+  "short_name": "Trigger3D",
+  "description": "Exploration interactive 3D de points gâchettes musculaires.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#060914",
+  "theme_color": "#0b1020",
+  "lang": "fr-FR",
+  "icons": [
+    { "src": "./icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
   ]
 }
