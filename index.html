@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1020" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Trigger3D" />
+  <title>Trigger3D</title>
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="brand">Trigger3D</div>
+      <div class="subtitle">Exploration interactive des points gâchettes</div>
+    </div>
+    <button id="installBtn" class="ghost" hidden>Installer</button>
+  </header>
+
+  <main class="layout">
+    <section class="viewer-card">
+      <div id="viewer"></div>
+
+      <div class="viewer-tools">
+        <button data-view="front">Face</button>
+        <button data-view="back">Dos</button>
+        <button data-view="left">Profil G</button>
+        <button data-view="right">Profil D</button>
+        <button id="resetView">Réinitialiser</button>
+      </div>
+
+      <div class="legend">
+        <span><i class="dot trigger"></i> Point gâchette</span>
+        <span><i class="dot pain"></i> Zone projetée</span>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <div class="tabs">
+        <button class="tab active" data-tab="explore">Explorer</button>
+        <button class="tab" data-tab="pain">J’ai mal ici</button>
+        <button class="tab" data-tab="library">Muscles</button>
+      </div>
+
+      <section id="tab-explore" class="tab-panel active">
+        <div id="emptyState" class="empty-state">
+          <h2>Sélectionne un point</h2>
+          <p>Fais tourner le corps, zoome puis touche une pastille rouge.</p>
+        </div>
+
+        <article id="detailCard" class="detail-card" hidden>
+          <div class="eyebrow">POINT GÂCHETTE</div>
+          <h2 id="detailTitle"></h2>
+          <p id="detailMuscle" class="muted"></p>
+
+          <div class="info-grid">
+            <div>
+              <h3>Zone fréquemment ressentie</h3>
+              <p id="detailReferral"></p>
+            </div>
+            <div>
+              <h3>Repérage</h3>
+              <p id="detailLocation"></p>
+            </div>
+            <div>
+              <h3>Auto-pression</h3>
+              <p id="detailCare"></p>
+            </div>
+            <div>
+              <h3>Précautions</h3>
+              <p id="detailCaution"></p>
+            </div>
+          </div>
+
+          <button id="togglePain" class="primary">Afficher la zone projetée</button>
+        </article>
+      </section>
+
+      <section id="tab-pain" class="tab-panel">
+        <h2>Où as-tu mal ?</h2>
+        <p class="muted">Choisis une zone. L’application affiche des muscles pouvant être associés à cette région.</p>
+        <div id="painButtons" class="chip-grid"></div>
+        <div id="painResults" class="results"></div>
+      </section>
+
+      <section id="tab-library" class="tab-panel">
+        <h2>Bibliothèque</h2>
+        <div id="muscleList" class="results"></div>
+      </section>
+
+      <div class="medical-note">
+        <strong>Important</strong>
+        <p>Prototype pédagogique. Il ne pose pas de diagnostic. Une douleur brutale, persistante, inexpliquée, associée à une faiblesse, un engourdissement, de la fièvre, un traumatisme important ou une douleur thoracique nécessite un avis médical adapté.</p>
+      </div>
+    </aside>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
