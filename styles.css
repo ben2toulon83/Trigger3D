@@ -175,3 +175,26 @@ button{cursor:pointer}
   .viewer-card{padding-left:0}
   .viewer-tools{left:18px}
 }
+
+.focus-quality{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  margin:0 0 14px;
+  padding:6px 9px;
+  border-radius:999px;
+  font-size:11px;
+  font-weight:700;
+  letter-spacing:.02em;
+  border:1px solid var(--border);
+}
+.focus-quality.exact{
+  color:#a7f3d0;
+  background:rgba(16,185,129,.10);
+  border-color:rgba(16,185,129,.28);
+}
+.focus-quality.regional{
+  color:#fde68a;
+  background:rgba(245,158,11,.10);
+  border-color:rgba(245,158,11,.28);
+}
