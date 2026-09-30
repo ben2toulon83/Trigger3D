@@ -35,6 +35,7 @@ let selectedMuscleMeshes=[];
 let painVisible=false;
 let filterMode="all";
 let targetRotX=-0.05, targetRotY=0, rotX=-0.05, rotY=0;
+let currentView="front";
 let cameraTarget=new THREE.Vector3(0,0.25,0);
 let cameraTargetGoal=cameraTarget.clone();
 let userPanOffset=new THREE.Vector3(0,0,0);
@@ -684,8 +685,10 @@ function schedulePointFocus(point){
   pendingFocusMeshes=resolved.length ? resolved : null;
   pendingFocusPoint=point;
 
-  targetRotY=viewAngles[point.view] ?? 0;
+  currentView=point.view || currentView;
+  targetRotY=viewAngles[currentView] ?? 0;
   targetRotX=-.04;
+  updatePointVisibility();
 }
 
 function angularDistance(a,b){
@@ -740,19 +743,47 @@ document.querySelector("#resetView").addEventListener("click",()=>{
   resetCamera();
 });
 document.querySelectorAll("[data-view]").forEach(btn=>btn.addEventListener("click",()=>{
-  targetRotY=viewAngles[btn.dataset.view]??0;
+  currentView=btn.dataset.view;
+  targetRotY=viewAngles[currentView]??0;
   targetRotX=-.05;
   resetCamera();
+  updatePointVisibility();
 }));
 
 document.querySelectorAll("[data-body-nav]").forEach(btn=>btn.addEventListener("click",()=>{
   focusBodyBand(btn.dataset.bodyNav);
 }));
 
+
+function pointVisibleForView(point){
+  // When the user is looking from the side, suppress points that belong
+  // clearly to the opposite side or to hidden front/back surfaces.
+  if(currentView==="left"){
+    if(point.side==="droit") return false;
+    return point.view==="left" || point.view==="front" || point.view==="back";
+  }
+  if(currentView==="right"){
+    if(point.side==="gauche") return false;
+    return point.view==="right" || point.view==="front" || point.view==="back";
+  }
+
+  if(currentView==="front"){
+    return point.view!=="back";
+  }
+
+  if(currentView==="back"){
+    return point.view!=="front";
+  }
+
+  return true;
+}
+
 function updatePointVisibility(){
   markerMeshes.forEach(mesh=>{
     const p=mesh.userData.point;
-    mesh.visible=filterMode==="all" || (selected && p.muscle===selected.muscle);
+    const allowedByFilter=filterMode==="all" || (selected && p.muscle===selected.muscle);
+    const allowedByView=pointVisibleForView(p);
+    mesh.visible=allowedByFilter && allowedByView;
   });
   document.querySelector("#showAllPoints").classList.toggle("active",filterMode==="all");
   document.querySelector("#focusSelection").classList.toggle("active",filterMode==="selected");
@@ -842,8 +873,10 @@ renderer.domElement.addEventListener("pointermove",e=>{
 
     cameraTargetGoal.add(delta);
   } else {
+    currentView="free";
     targetRotY+=dx*.009;
     targetRotX+=dy*.005;
+    updatePointVisibility();
     targetRotX=Math.max(-.45,Math.min(.45,targetRotX));
   }
 
@@ -952,7 +985,8 @@ function animate(){
 
   markerMeshes.forEach((m,i)=>{
     const pulse=1+Math.sin(performance.now()/620+i)*.025;
-    m.scale.setScalar(pulse);
+    const profileScale=(currentView==="left" || currentView==="right") ? .78 : 1;
+    m.scale.setScalar(pulse*profileScale);
   });
 
   renderer.render(scene,camera);
