@@ -10,7 +10,7 @@
   <title>Trigger3D V2</title>
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./icons/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="./styles.css?v=surface7" />
+  <link rel="stylesheet" href="./styles.css?v=navfeet8" />
   <script type="importmap">
   {
     "imports": {
@@ -44,7 +44,14 @@
         <button id="focusSelection" class="small">Focus sélection</button>
       </div>
 
-      <div style="position:absolute;left:18px;bottom:78px;font-size:11px;color:#9da9c4;z-index:6">Double-cliquez dans la vue pour recentrer le corps.</div>
+      <div class="body-nav">
+        <button data-body-nav="upper">Haut</button>
+        <button data-body-nav="trunk">Tronc</button>
+        <button data-body-nav="pelvis">Bassin</button>
+        <button data-body-nav="legs">Jambes</button>
+        <button data-body-nav="feet">Pieds</button>
+      </div>
+      <div class="viewer-hint">Double-cliquez dans la vue pour revenir au corps entier.</div>
       <div class="viewer-tools">
         <button data-view="front">Face</button>
         <button data-view="back">Dos</button>
@@ -123,6 +130,6 @@
     </aside>
   </main>
 
-  <script type="module" src="./app.js?v=surface7"></script>
+  <script type="module" src="./app.js?v=navfeet8"></script>
 </body>
 </html>
