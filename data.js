@@ -206,6 +206,214 @@ const baseTriggerPoints = [
     location:"Face antéro-latérale de la jambe.",
     care:"Massage longitudinal doux.",
     caution:"Éviter si douleur osseuse ou gonflement inexpliqué."
+  },
+  {
+    id:"deltoid-left", muscle:"Deltoïde", label:"Deltoïde", side:"gauche",
+    position:[-0.48,1.30,0.02], painZones:["épaule","bras"],
+    referral:"Douleur locale de l’épaule pouvant s’étendre au bras.",
+    location:"Masse musculaire latérale de l’épaule.",
+    care:"Pression modérée ou balle contre le mur.",
+    caution:"Prudence après traumatisme ou chirurgie récente de l’épaule."
+  },
+  {
+    id:"deltoid-right", muscle:"Deltoïde", label:"Deltoïde", side:"droit",
+    position:[0.48,1.30,0.02], painZones:["épaule","bras"],
+    referral:"Douleur locale de l’épaule pouvant s’étendre au bras.",
+    location:"Masse musculaire latérale de l’épaule.",
+    care:"Pression modérée ou balle contre le mur.",
+    caution:"Prudence après traumatisme ou chirurgie récente de l’épaule."
+  },
+  {
+    id:"lat-left", muscle:"Grand dorsal", label:"Grand dorsal", side:"gauche",
+    position:[-0.34,0.82,-0.10], painZones:["dos","aisselle","bras"],
+    referral:"Dos latéral, région axillaire et parfois bras.",
+    location:"Grande nappe musculaire latérale du dos.",
+    care:"Balle contre le mur ou auto-massage doux.",
+    caution:"Éviter une pression excessive sur les côtes."
+  },
+  {
+    id:"lat-right", muscle:"Grand dorsal", label:"Grand dorsal", side:"droit",
+    position:[0.34,0.82,-0.10], painZones:["dos","aisselle","bras"],
+    referral:"Dos latéral, région axillaire et parfois bras.",
+    location:"Grande nappe musculaire latérale du dos.",
+    care:"Balle contre le mur ou auto-massage doux.",
+    caution:"Éviter une pression excessive sur les côtes."
+  },
+  {
+    id:"rhomboid-left", muscle:"Rhomboïdes", label:"Rhomboïdes", side:"gauche",
+    position:[-0.18,1.18,-0.14], painZones:["omoplate","dos"],
+    referral:"Bord interne de l’omoplate et haut du dos.",
+    location:"Entre colonne thoracique et bord médial de l’omoplate.",
+    care:"Balle contre le mur avec pression progressive.",
+    caution:"Éviter une pression directe sur les apophyses vertébrales."
+  },
+  {
+    id:"rhomboid-right", muscle:"Rhomboïdes", label:"Rhomboïdes", side:"droit",
+    position:[0.18,1.18,-0.14], painZones:["omoplate","dos"],
+    referral:"Bord interne de l’omoplate et haut du dos.",
+    location:"Entre colonne thoracique et bord médial de l’omoplate.",
+    care:"Balle contre le mur avec pression progressive.",
+    caution:"Éviter une pression directe sur les apophyses vertébrales."
+  },
+  {
+    id:"glutemax-left", muscle:"Grand fessier", label:"Grand fessier", side:"gauche",
+    position:[-0.15,0.08,-0.14], painZones:["fesse","sacrum","cuisse"],
+    referral:"Fesse, région sacrée et parfois haut de cuisse.",
+    location:"Masse principale de la fesse.",
+    care:"Balle ou rouleau avec pression progressive.",
+    caution:"Stopper en cas de douleur neurologique ou traumatisme récent."
+  },
+  {
+    id:"glutemax-right", muscle:"Grand fessier", label:"Grand fessier", side:"droit",
+    position:[0.15,0.08,-0.14], painZones:["fesse","sacrum","cuisse"],
+    referral:"Fesse, région sacrée et parfois haut de cuisse.",
+    location:"Masse principale de la fesse.",
+    care:"Balle ou rouleau avec pression progressive.",
+    caution:"Stopper en cas de douleur neurologique ou traumatisme récent."
+  },
+  {
+    id:"glutemin-left", muscle:"Petit fessier", label:"Petit fessier", side:"gauche",
+    position:[-0.24,0.12,-0.05], painZones:["hanche","fesse","jambe"],
+    referral:"Hanche latérale, fesse et parfois face latérale de la jambe.",
+    location:"Plan profond de la région fessière latérale.",
+    care:"Pression douce et précise.",
+    caution:"Éviter les pressions profondes si irradiation neurologique."
+  },
+  {
+    id:"glutemin-right", muscle:"Petit fessier", label:"Petit fessier", side:"droit",
+    position:[0.24,0.12,-0.05], painZones:["hanche","fesse","jambe"],
+    referral:"Hanche latérale, fesse et parfois face latérale de la jambe.",
+    location:"Plan profond de la région fessière latérale.",
+    care:"Pression douce et précise.",
+    caution:"Éviter les pressions profondes si irradiation neurologique."
+  },
+  {
+    id:"soleus-left", muscle:"Soléaire", label:"Soléaire", side:"gauche",
+    position:[-0.12,-1.15,-0.04], painZones:["mollet","cheville","talon"],
+    referral:"Mollet profond, cheville et talon.",
+    location:"Sous le gastrocnémien, dans la partie postérieure de la jambe.",
+    care:"Compression douce et progressive.",
+    caution:"Ne pas masser un mollet rouge, chaud ou gonflé."
+  },
+  {
+    id:"soleus-right", muscle:"Soléaire", label:"Soléaire", side:"droit",
+    position:[0.12,-1.15,-0.04], painZones:["mollet","cheville","talon"],
+    referral:"Mollet profond, cheville et talon.",
+    location:"Sous le gastrocnémien, dans la partie postérieure de la jambe.",
+    care:"Compression douce et progressive.",
+    caution:"Ne pas masser un mollet rouge, chaud ou gonflé."
+  },
+  {
+    id:"psoas-left", muscle:"Psoas-iliaque", label:"Psoas-iliaque", side:"gauche",
+    position:[-0.10,0.46,0.10], painZones:["aine","hanche","lombaires"],
+    referral:"Aine, hanche antérieure et région lombaire.",
+    location:"Plan profond de la hanche et de l’abdomen.",
+    care:"Ne pas pratiquer d’auto-pression profonde.",
+    caution:"Zone profonde contenant des structures abdominales : travail manuel spécialisé recommandé."
+  },
+  {
+    id:"psoas-right", muscle:"Psoas-iliaque", label:"Psoas-iliaque", side:"droit",
+    position:[0.10,0.46,0.10], painZones:["aine","hanche","lombaires"],
+    referral:"Aine, hanche antérieure et région lombaire.",
+    location:"Plan profond de la hanche et de l’abdomen.",
+    care:"Ne pas pratiquer d’auto-pression profonde.",
+    caution:"Zone profonde contenant des structures abdominales : travail manuel spécialisé recommandé."
+  },
+  {
+    id:"adductors-left", muscle:"Adducteurs", label:"Adducteurs", side:"gauche",
+    position:[-0.10,-0.30,0.02], painZones:["aine","cuisse","genou"],
+    referral:"Aine, face interne de cuisse et parfois genou.",
+    location:"Face interne de la cuisse.",
+    care:"Pression modérée ou rouleau très progressif.",
+    caution:"Éviter en cas de lésion musculaire aiguë."
+  },
+  {
+    id:"adductors-right", muscle:"Adducteurs", label:"Adducteurs", side:"droit",
+    position:[0.10,-0.30,0.02], painZones:["aine","cuisse","genou"],
+    referral:"Aine, face interne de cuisse et parfois genou.",
+    location:"Face interne de la cuisse.",
+    care:"Pression modérée ou rouleau très progressif.",
+    caution:"Éviter en cas de lésion musculaire aiguë."
+  },
+  {
+    id:"rectusfem-left", muscle:"Droit fémoral", label:"Droit fémoral", side:"gauche",
+    position:[-0.16,-0.35,0.12], painZones:["cuisse","genou"],
+    referral:"Face antérieure de cuisse et région du genou.",
+    location:"Partie centrale du quadriceps.",
+    care:"Rouleau ou pression douce.",
+    caution:"Éviter sur lésion aiguë ou hématome."
+  },
+  {
+    id:"rectusfem-right", muscle:"Droit fémoral", label:"Droit fémoral", side:"droit",
+    position:[0.16,-0.35,0.12], painZones:["cuisse","genou"],
+    referral:"Face antérieure de cuisse et région du genou.",
+    location:"Partie centrale du quadriceps.",
+    care:"Rouleau ou pression douce.",
+    caution:"Éviter sur lésion aiguë ou hématome."
+  },
+  {
+    id:"vastuslat-left", muscle:"Vaste latéral", label:"Vaste latéral", side:"gauche",
+    position:[-0.20,-0.42,0.08], painZones:["cuisse","genou"],
+    referral:"Face latérale de cuisse et genou.",
+    location:"Partie externe du quadriceps.",
+    care:"Rouleau ou pression progressive.",
+    caution:"Éviter une pression excessive près du genou."
+  },
+  {
+    id:"vastuslat-right", muscle:"Vaste latéral", label:"Vaste latéral", side:"droit",
+    position:[0.20,-0.42,0.08], painZones:["cuisse","genou"],
+    referral:"Face latérale de cuisse et genou.",
+    location:"Partie externe du quadriceps.",
+    care:"Rouleau ou pression progressive.",
+    caution:"Éviter une pression excessive près du genou."
+  },
+  {
+    id:"tfl-left", muscle:"Tenseur du fascia lata", label:"Tenseur du fascia lata", side:"gauche",
+    position:[-0.25,0.05,0.06], painZones:["hanche","cuisse"],
+    referral:"Hanche latérale et haut de cuisse.",
+    location:"Face antéro-latérale de la hanche.",
+    care:"Pression douce et localisée.",
+    caution:"Éviter de rouler agressivement sur la bandelette ilio-tibiale."
+  },
+  {
+    id:"tfl-right", muscle:"Tenseur du fascia lata", label:"Tenseur du fascia lata", side:"droit",
+    position:[0.25,0.05,0.06], painZones:["hanche","cuisse"],
+    referral:"Hanche latérale et haut de cuisse.",
+    location:"Face antéro-latérale de la hanche.",
+    care:"Pression douce et localisée.",
+    caution:"Éviter de rouler agressivement sur la bandelette ilio-tibiale."
+  },
+  {
+    id:"scalene-left", muscle:"Scalènes", label:"Scalènes", side:"gauche",
+    position:[-0.12,1.66,0.08], painZones:["cou","épaule","bras"],
+    referral:"Cou, épaule et parfois membre supérieur.",
+    location:"Plan latéral profond du cou.",
+    care:"Pas d’auto-pression profonde.",
+    caution:"Zone vasculo-nerveuse sensible : manipulation profonde déconseillée."
+  },
+  {
+    id:"scalene-right", muscle:"Scalènes", label:"Scalènes", side:"droit",
+    position:[0.12,1.66,0.08], painZones:["cou","épaule","bras"],
+    referral:"Cou, épaule et parfois membre supérieur.",
+    location:"Plan latéral profond du cou.",
+    care:"Pas d’auto-pression profonde.",
+    caution:"Zone vasculo-nerveuse sensible : manipulation profonde déconseillée."
+  },
+  {
+    id:"temporalis-left", muscle:"Temporal", label:"Temporal", side:"gauche",
+    position:[-0.16,2.02,0.10], painZones:["tempe","tête","mâchoire"],
+    referral:"Tempe, région crânienne latérale et mâchoire.",
+    location:"Région temporale, au-dessus de l’arcade zygomatique.",
+    care:"Massage très léger avec les doigts.",
+    caution:"Éviter une pression forte en cas de céphalée inhabituelle."
+  },
+  {
+    id:"temporalis-right", muscle:"Temporal", label:"Temporal", side:"droit",
+    position:[0.16,2.02,0.10], painZones:["tempe","tête","mâchoire"],
+    referral:"Tempe, région crânienne latérale et mâchoire.",
+    location:"Région temporale, au-dessus de l’arcade zygomatique.",
+    care:"Massage très léger avec les doigts.",
+    caution:"Éviter une pression forte en cas de céphalée inhabituelle."
   }
 ];
 
@@ -306,5 +514,5 @@ export const triggerPoints = baseTriggerPoints.flatMap(point => {
 });
 
 export const painAreas = [
-  "tempe","nuque","mâchoire","visage","épaule","bras","avant-bras","thorax","lombaires","hanche","fesse","jambe","cuisse","genou","mollet","cheville","pied","plante du pied"
+  "tempe","tête","nuque","cou","mâchoire","visage","épaule","omoplate","bras","avant-bras","thorax","dos","aisselle","lombaires","aine","hanche","fesse","sacrum","jambe","cuisse","genou","mollet","cheville","talon","pied","plante du pied"
 ];
