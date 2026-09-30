@@ -601,6 +601,30 @@ function getWholeBodyBox(){
   return box;
 }
 
+function opticalCenterWorldOffset(){
+  const r=viewer.getBoundingClientRect();
+  if(!r.width || window.innerWidth<=900) return 0;
+
+  const toolbar=document.querySelector(".viewer-tools");
+  if(!toolbar) return 0;
+
+  const tr=toolbar.getBoundingClientRect();
+  const occupied=Math.max(0,tr.right-r.left+18);
+
+  // Desired visual centre = centre of the free area to the right of the toolbar.
+  const desiredPx=(occupied+r.width)/2;
+  const canvasCenterPx=r.width/2;
+  const deltaPx=desiredPx-canvasCenterPx;
+
+  // Convert screen pixels into world units at the current full-body depth.
+  const distance=Math.max(cameraDistanceGoal||5,1);
+  const verticalFov=THREE.MathUtils.degToRad(camera.fov);
+  const worldHeight=2*distance*Math.tan(verticalFov/2);
+  const worldWidth=worldHeight*camera.aspect;
+
+  return (deltaPx/r.width)*worldWidth;
+}
+
 function wholeBodyFitDistance(){
   const box=getWholeBodyBox();
   if(box.isEmpty()) return 7.2;
@@ -626,7 +650,7 @@ function fitWholeBody(){
     const center=new THREE.Vector3();
     box.getCenter(center);
     cameraTargetGoal.copy(center);
-    cameraTargetGoal.x += 0.10;
+    cameraTargetGoal.x += opticalCenterWorldOffset();
   } else {
     cameraTargetGoal.set(0,.15,0);
   }
@@ -658,7 +682,7 @@ function focusBodyBand(name){
   resetHighlights();
 
   cameraTargetGoal.set(
-    center.x + 0.10,
+    center.x + opticalCenterWorldOffset(),
     box.min.y + size.y*p.y,
     center.z
   );
@@ -756,25 +780,25 @@ document.querySelectorAll("[data-body-nav]").forEach(btn=>btn.addEventListener("
 
 
 function pointVisibleForView(point){
-  // When the user is looking from the side, suppress points that belong
-  // clearly to the opposite side or to hidden front/back surfaces.
+  // Canonical views are intentionally strict.
+  // Profile views only show points explicitly authored for that profile.
   if(currentView==="left"){
-    if(point.side==="droit") return false;
-    return point.view==="left" || point.view==="front" || point.view==="back";
+    return point.side==="gauche" && point.view==="left";
   }
+
   if(currentView==="right"){
-    if(point.side==="gauche") return false;
-    return point.view==="right" || point.view==="front" || point.view==="back";
+    return point.side==="droit" && point.view==="right";
   }
 
   if(currentView==="front"){
-    return point.view!=="back";
+    return point.view==="front" || point.view==="left" || point.view==="right";
   }
 
   if(currentView==="back"){
-    return point.view!=="front";
+    return point.view==="back";
   }
 
+  // Free rotation: let depth testing decide visibility.
   return true;
 }
 
@@ -942,6 +966,15 @@ function resize(){
   camera.updateProjectionMatrix();
   if(!selectedMuscleMeshes.length && !pendingFocusPoint){
     cameraDistanceGoal=wholeBodyFitDistance();
+    if(userPanOffset.lengthSq()<1e-6){
+      const box=getWholeBodyBox();
+      if(!box.isEmpty()){
+        const center=new THREE.Vector3();
+        box.getCenter(center);
+        center.x+=opticalCenterWorldOffset();
+        cameraTargetGoal.copy(center);
+      }
+    }
   }
 }
 window.addEventListener("resize",resize);resize();
