@@ -259,6 +259,102 @@ function resolvePointMeshes(point){
   return matchMuscle(point);
 }
 
+
+function projectPointOnSurface(anchorWorld, meshes, view){
+  if(!meshes || !meshes.length) return anchorWorld.clone();
+
+  const box=new THREE.Box3();
+  meshes.forEach(m=>box.expandByObject(m));
+
+  const size=new THREE.Vector3();
+  box.getSize(size);
+
+  const margin=Math.max(size.x,size.y,size.z)*0.8+0.03;
+  const ray=new THREE.Raycaster();
+  const candidates=[];
+
+  const pushCandidate=(origin,direction)=>{
+    candidates.push({origin,direction:direction.clone().normalize()});
+  };
+
+  if(view==="front"){
+    pushCandidate(
+      new THREE.Vector3(anchorWorld.x,anchorWorld.y,box.max.z+margin),
+      new THREE.Vector3(0,0,-1)
+    );
+  } else if(view==="back"){
+    pushCandidate(
+      new THREE.Vector3(anchorWorld.x,anchorWorld.y,box.min.z-margin),
+      new THREE.Vector3(0,0,1)
+    );
+  } else if(view==="left"){
+    pushCandidate(
+      new THREE.Vector3(box.min.x-margin,anchorWorld.y,anchorWorld.z),
+      new THREE.Vector3(1,0,0)
+    );
+  } else if(view==="right"){
+    pushCandidate(
+      new THREE.Vector3(box.max.x+margin,anchorWorld.y,anchorWorld.z),
+      new THREE.Vector3(-1,0,0)
+    );
+  }
+
+  // Fallback rays in all main anatomical directions.
+  pushCandidate(
+    new THREE.Vector3(anchorWorld.x,box.max.y+margin,anchorWorld.z),
+    new THREE.Vector3(0,-1,0)
+  );
+  pushCandidate(
+    new THREE.Vector3(anchorWorld.x,box.min.y-margin,anchorWorld.z),
+    new THREE.Vector3(0,1,0)
+  );
+  pushCandidate(
+    new THREE.Vector3(anchorWorld.x,anchorWorld.y,box.max.z+margin),
+    new THREE.Vector3(0,0,-1)
+  );
+  pushCandidate(
+    new THREE.Vector3(anchorWorld.x,anchorWorld.y,box.min.z-margin),
+    new THREE.Vector3(0,0,1)
+  );
+  pushCandidate(
+    new THREE.Vector3(box.min.x-margin,anchorWorld.y,anchorWorld.z),
+    new THREE.Vector3(1,0,0)
+  );
+  pushCandidate(
+    new THREE.Vector3(box.max.x+margin,anchorWorld.y,anchorWorld.z),
+    new THREE.Vector3(-1,0,0)
+  );
+
+  let bestHit=null;
+  let bestDistance=Infinity;
+
+  for(const candidate of candidates){
+    ray.set(candidate.origin,candidate.direction);
+    const hits=ray.intersectObjects(meshes,false);
+    if(!hits.length) continue;
+
+    const hit=hits[0];
+    const d=hit.point.distanceTo(anchorWorld);
+
+    if(d<bestDistance){
+      bestDistance=d;
+      bestHit=hit;
+    }
+  }
+
+  if(!bestHit) return anchorWorld.clone();
+
+  const normal=new THREE.Vector3(0,0,1);
+
+  if(bestHit.face){
+    normal.copy(bestHit.face.normal).transformDirection(bestHit.object.matrixWorld);
+  } else {
+    normal.copy(bestHit.ray.direction).negate();
+  }
+
+  return bestHit.point.clone().addScaledVector(normal,0.004);
+}
+
 function rebuildMarkers(){
   clearMarkers();
   anatomyRoot.updateMatrixWorld(true);
@@ -271,47 +367,19 @@ function rebuildMarkers(){
     if(matched.length){
       const box=new THREE.Box3();
       matched.forEach(m=>box.expandByObject(m));
+
       const size=new THREE.Vector3();
       box.getSize(size);
 
       const a=p.anchor || [0.5,0.5,0.5];
+
       const anchorPoint=new THREE.Vector3(
-        box.min.x + size.x * a[0],
-        box.min.y + size.y * a[1],
-        box.min.z + size.z * a[2]
+        box.min.x + size.x*a[0],
+        box.min.y + size.y*a[1],
+        box.min.z + size.z*a[2]
       );
 
-      // Project the anatomical anchor onto the real mesh surface.
-      // This keeps trigger points attached to the muscle rather than floating
-      // at the centre of its bounding box.
-      const ray=new THREE.Raycaster();
-      const margin=Math.max(size.x,size.y,size.z)*0.75 + 0.05;
-      let origin=anchorPoint.clone();
-      let direction=new THREE.Vector3(0,0,-1);
-
-      if(p.view==="front"){
-        origin.z=box.max.z+margin;
-        direction.set(0,0,-1);
-      } else if(p.view==="back"){
-        origin.z=box.min.z-margin;
-        direction.set(0,0,1);
-      } else if(p.view==="left"){
-        origin.x=box.min.x-margin;
-        direction.set(1,0,0);
-      } else if(p.view==="right"){
-        origin.x=box.max.x+margin;
-        direction.set(-1,0,0);
-      }
-
-      ray.set(origin,direction.normalize());
-      const hits=ray.intersectObjects(matched,false);
-      if(hits.length){
-        worldPos.copy(hits[0].point);
-        // Tiny outward lift prevents z-fighting while preserving depth occlusion.
-        worldPos.addScaledVector(direction,-0.006);
-      } else {
-        worldPos.copy(anchorPoint);
-      }
+      worldPos.copy(projectPointOnSurface(anchorPoint,matched,p.view));
     }
 
     // Box3 returns world coordinates. Convert them back into the local
@@ -319,7 +387,7 @@ function rebuildMarkers(){
     const localPos=markerRoot.worldToLocal(worldPos.clone());
 
     const mesh=new THREE.Mesh(
-      new THREE.SphereGeometry(.018,18,12),
+      new THREE.SphereGeometry(.014,16,12),
       new THREE.MeshStandardMaterial({
         color:0xff3150,
         emissive:0x7a0718,
@@ -463,7 +531,11 @@ function showPain(){
   const halo=new THREE.Mesh(g,m); halo.position.copy(center); halo.scale.set(1.7,2.3,.7); halo.renderOrder=19; painRoot.add(halo);
 }
 function selectPoint(point,zoom=true){
-  selected=point; painVisible=false; clearPain();
+  selected=point;
+  filterMode="selected";
+  painVisible=false;
+  clearPain();
+  updatePointVisibility();
   document.querySelector("#emptyState").hidden=true;
   document.querySelector("#detailCard").hidden=false;
   document.querySelector("#detailTitle").textContent=point.label;
