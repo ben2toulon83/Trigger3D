@@ -1,5 +1,5 @@
-const CACHE="trigger3d-pan-v13";
-const APP=["./","./index.html","./styles.css?v=pan13","./app.js?v=pan13","./data.js","./manifest.webmanifest","./icons/icon.svg"];
+const CACHE="trigger3d-view-v14";
+const APP=["./","./index.html","./styles.css?v=view14","./app.js?v=view14","./data.js","./manifest.webmanifest","./icons/icon.svg"];
 self.addEventListener("install",event=>{
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(c=>c.addAll(APP)));
