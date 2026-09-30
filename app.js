@@ -609,10 +609,11 @@ function opticalCenterWorldOffset(){
   if(!toolbar) return 0;
 
   const tr=toolbar.getBoundingClientRect();
-  const occupied=Math.max(0,tr.right-r.left+18);
+  const occupied=Math.max(0,tr.right-r.left+26);
 
   // Desired visual centre = centre of the free area to the right of the toolbar.
-  const desiredPx=(occupied+r.width)/2;
+  const freeWidth=Math.max(100,r.width-occupied);
+  const desiredPx=occupied + freeWidth*0.54;
   const canvasCenterPx=r.width/2;
   const deltaPx=desiredPx-canvasCenterPx;
 
@@ -1026,4 +1027,18 @@ function animate(){
 }
 animate();
 
-if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js?v=real1").catch(()=>{}));}
+if("serviceWorker" in navigator){
+  window.addEventListener("load",async()=>{
+    try{
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+      if("caches" in window){
+        const keys=await caches.keys();
+        await Promise.all(keys.filter(k=>k.startsWith("trigger3d-")).map(k=>caches.delete(k)));
+      }
+      console.info("Trigger3D development cache cleared");
+    }catch(e){
+      console.warn("Cache cleanup skipped",e);
+    }
+  });
+}
