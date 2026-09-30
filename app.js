@@ -153,7 +153,43 @@ loader.load(MODEL_URL,gltf=>{
 });
 
 const markerMeshes=[];
-function clearMarkers(){ while(markerRoot.children.length) markerRoot.remove(markerRoot.children[0]); markerMeshes.length=0; }
+const markerByPointId=new Map();
+function clearMarkers(){
+  while(markerRoot.children.length) markerRoot.remove(markerRoot.children[0]);
+  markerMeshes.length=0;
+  markerByPointId.clear();
+}
+
+function worldDistanceToBox(point,box){
+  const x=Math.max(box.min.x,Math.min(point.x,box.max.x));
+  const y=Math.max(box.min.y,Math.min(point.y,box.max.y));
+  const z=Math.max(box.min.z,Math.min(point.z,box.max.z));
+  return point.distanceTo(new THREE.Vector3(x,y,z));
+}
+
+function nearestMeshesToWorldPoint(worldPoint,count=1){
+  return anatomyMeshes
+    .map(m=>{
+      const box=new THREE.Box3().setFromObject(m);
+      return {m,d:worldDistanceToBox(worldPoint,box)};
+    })
+    .sort((a,b)=>a.d-b.d)
+    .slice(0,count)
+    .map(x=>x.m);
+}
+
+function resolvePointMeshes(point){
+  const named=matchMuscle(point);
+  if(named.length) return named;
+
+  const marker=markerByPointId.get(point.id);
+  if(marker){
+    markerRoot.updateMatrixWorld(true);
+    const world=marker.getWorldPosition(new THREE.Vector3());
+    return nearestMeshesToWorldPoint(world,1);
+  }
+  return [];
+}
 function rebuildMarkers(){
   clearMarkers();
   anatomyRoot.updateMatrixWorld(true);
@@ -195,6 +231,7 @@ function rebuildMarkers(){
     mesh.userData.point=p;
     markerRoot.add(mesh);
     markerMeshes.push(mesh);
+    markerByPointId.set(p.id,mesh);
   });
 
   updatePointVisibility();
@@ -240,8 +277,16 @@ function focusOnMeshes(meshes){
   highlightMeshes(meshes);
 }
 function focusPoint(point){
-  const meshes=matchMuscle(point);
+  const meshes=resolvePointMeshes(point);
   if(meshes.length) focusOnMeshes(meshes);
+  else {
+    const marker=markerByPointId.get(point.id);
+    if(marker){
+      const c=marker.getWorldPosition(new THREE.Vector3());
+      cameraTargetGoal.copy(c);
+      cameraDistanceGoal=1.25;
+    }
+  }
 }
 function resetCamera(){
   pendingFocusMeshes=null;
@@ -254,9 +299,26 @@ const viewAngles={front:0,back:Math.PI,left:-Math.PI/2,right:Math.PI/2};
 
 function schedulePointFocus(point){
   if(!point) return;
-  pendingFocusMeshes=matchMuscle(point);
+
+  // Remove the previous highlight immediately, so a stale muscle never remains
+  // highlighted while the body is rotating toward the new selection.
+  resetHighlights();
+
+  const resolved=resolvePointMeshes(point);
+  pendingFocusMeshes=resolved.length ? resolved : null;
+
   targetRotY=viewAngles[point.view] ?? 0;
   targetRotX=-.04;
+
+  // Even when mesh naming is imperfect, keep the camera tied to the marker.
+  if(!pendingFocusMeshes){
+    const marker=markerByPointId.get(point.id);
+    if(marker){
+      const c=marker.getWorldPosition(new THREE.Vector3());
+      cameraTargetGoal.copy(c);
+      cameraDistanceGoal=1.25;
+    }
+  }
 }
 
 function angularDistance(a,b){
@@ -267,7 +329,7 @@ function clearPain(){ while(painRoot.children.length) painRoot.remove(painRoot.c
 function showPain(){
   clearPain();
   if(!selected) return;
-  const matched=matchMuscle(selected);
+  const matched=resolvePointMeshes(selected);
   let center=new THREE.Vector3(...(selected.position||[0,0,0]));
   if(matched.length){ const b=new THREE.Box3(); matched.forEach(m=>b.expandByObject(m)); b.getCenter(center); }
   const g=new THREE.SphereGeometry(.18,24,16);
@@ -367,12 +429,33 @@ renderer.domElement.addEventListener("pointerup",e=>{
   if(markerHit){selectPoint(markerHit.object.userData.point,true);return;}
   const muscleHit=raycaster.intersectObjects(anatomyMeshes,false)[0];
   if(muscleHit){
-    const mesh=muscleHit.object; focusOnMeshes([mesh]);
+    const mesh=muscleHit.object;
+    focusOnMeshes([mesh]);
+
     const n=norm(mesh.name || mesh.userData?.za_name || "");
+    let matchedPoint=null;
     for(const p of triggerPoints){
       const aa=aliases[p.muscle]||[];
-      if(aa.some(a=>n.includes(norm(a)))){selectPoint(p,false);break;}
+      if(aa.some(a=>n.includes(norm(a)))){matchedPoint=p;break;}
     }
+
+    // If mesh names do not match the atlas naming, select the nearest trigger
+    // point to the clicked anatomical structure instead.
+    if(!matchedPoint){
+      const box=new THREE.Box3().setFromObject(mesh);
+      const c=new THREE.Vector3(); box.getCenter(c);
+      let best=null, bestD=Infinity;
+      for(const p of triggerPoints){
+        const marker=markerByPointId.get(p.id);
+        if(!marker) continue;
+        const w=marker.getWorldPosition(new THREE.Vector3());
+        const d=w.distanceTo(c);
+        if(d<bestD){bestD=d;best=p;}
+      }
+      matchedPoint=best;
+    }
+
+    if(matchedPoint) selectPoint(matchedPoint,false);
   }
 });
 renderer.domElement.addEventListener("dblclick",()=>{
