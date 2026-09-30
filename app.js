@@ -206,11 +206,43 @@ function rebuildMarkers(){
       box.getSize(size);
 
       const a=p.anchor || [0.5,0.5,0.5];
-      worldPos.set(
+      const anchorPoint=new THREE.Vector3(
         box.min.x + size.x * a[0],
         box.min.y + size.y * a[1],
         box.min.z + size.z * a[2]
       );
+
+      // Project the anatomical anchor onto the real mesh surface.
+      // This keeps trigger points attached to the muscle rather than floating
+      // at the centre of its bounding box.
+      const ray=new THREE.Raycaster();
+      const margin=Math.max(size.x,size.y,size.z)*0.75 + 0.05;
+      let origin=anchorPoint.clone();
+      let direction=new THREE.Vector3(0,0,-1);
+
+      if(p.view==="front"){
+        origin.z=box.max.z+margin;
+        direction.set(0,0,-1);
+      } else if(p.view==="back"){
+        origin.z=box.min.z-margin;
+        direction.set(0,0,1);
+      } else if(p.view==="left"){
+        origin.x=box.min.x-margin;
+        direction.set(1,0,0);
+      } else if(p.view==="right"){
+        origin.x=box.max.x+margin;
+        direction.set(-1,0,0);
+      }
+
+      ray.set(origin,direction.normalize());
+      const hits=ray.intersectObjects(matched,false);
+      if(hits.length){
+        worldPos.copy(hits[0].point);
+        // Tiny outward lift prevents z-fighting while preserving depth occlusion.
+        worldPos.addScaledVector(direction,-0.006);
+      } else {
+        worldPos.copy(anchorPoint);
+      }
     }
 
     // Box3 returns world coordinates. Convert them back into the local
