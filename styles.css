@@ -167,3 +167,11 @@ button{cursor:pointer}
   }
   .tool-separator{width:1px;height:24px;grid-column:auto}
 }
+
+#viewer canvas{cursor:grab}
+#viewer canvas:active{cursor:grabbing}
+
+@media(min-width:901px){
+  .viewer-card{padding-left:0}
+  .viewer-tools{left:18px}
+}
