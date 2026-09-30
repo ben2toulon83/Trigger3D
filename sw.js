@@ -1,25 +1,11 @@
-const CACHE="trigger3d-center-v15";
-const APP=["./","./index.html","./styles.css?v=center15","./app.js?v=center15","./data.js","./manifest.webmanifest","./icons/icon.svg"];
-self.addEventListener("install",event=>{
-  self.skipWaiting();
-  event.waitUntil(caches.open(CACHE).then(c=>c.addAll(APP)));
-});
+self.addEventListener("install",()=>self.skipWaiting());
 self.addEventListener("activate",event=>{
   event.waitUntil(
     caches.keys()
-      .then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k))))
-      .then(()=>self.clients.claim())
+      .then(keys=>Promise.all(keys.filter(k=>k.startsWith("trigger3d-")).map(k=>caches.delete(k))))
+      .then(()=>self.registration.unregister())
+      .then(()=>self.clients.matchAll())
+      .then(clients=>clients.forEach(client=>client.navigate(client.url)))
   );
 });
-self.addEventListener("fetch",event=>{
-  if(event.request.method!=="GET") return;
-  event.respondWith(
-    fetch(event.request,{cache:"no-store"}).then(res=>{
-      if(res&&res.ok&&event.request.url.startsWith(self.location.origin)){
-        const copy=res.clone();
-        caches.open(CACHE).then(c=>c.put(event.request,copy));
-      }
-      return res;
-    }).catch(()=>caches.match(event.request))
-  );
-});
+self.addEventListener("fetch",()=>{});
