@@ -1,5 +1,5 @@
-const CACHE="trigger3d-region-v5";
-const APP=["./","./index.html","./styles.css?v=region5","./app.js?v=region5","./data.js","./manifest.webmanifest","./icons/icon.svg"];
+const CACHE="trigger3d-fit-v6";
+const APP=["./","./index.html","./styles.css?v=fit6","./app.js?v=fit6","./data.js","./manifest.webmanifest","./icons/icon.svg"];
 self.addEventListener("install",event=>{
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(c=>c.addAll(APP)));
