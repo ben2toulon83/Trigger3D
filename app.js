@@ -40,6 +40,24 @@ let cameraTargetGoal=cameraTarget.clone();
 let cameraDistance=5.2;
 let cameraDistanceGoal=5.2;
 let pendingFocusMeshes=null;
+let pendingFocusPoint=null;
+let bodyLocalBox=null;
+
+const anatomicalRegions={
+  "Trapèze supérieur":      {y:.78,z:.16,spanY:.13,spanX:.14,spanZ:.10},
+  "Sterno-cléido-mastoïdien":{y:.86,z:.76,spanY:.12,spanX:.10,spanZ:.12},
+  "Masséter":               {y:.92,z:.78,spanY:.08,spanX:.08,spanZ:.10},
+  "Supra-épineux":          {y:.75,z:.16,spanY:.08,spanX:.15,spanZ:.08},
+  "Infra-épineux":          {y:.69,z:.13,spanY:.15,spanX:.16,spanZ:.09},
+  "Élévateur de la scapula":{y:.78,z:.14,spanY:.14,spanX:.11,spanZ:.08},
+  "Grand pectoral":         {y:.69,z:.86,spanY:.18,spanX:.20,spanZ:.09},
+  "Carré des lombes":       {y:.51,z:.16,spanY:.16,spanX:.12,spanZ:.10},
+  "Moyen fessier":          {y:.38,z:.16,spanY:.14,spanX:.16,spanZ:.11},
+  "Piriforme":              {y:.34,z:.15,spanY:.09,spanX:.13,spanZ:.09},
+  "Ischio-jambiers":        {y:.23,z:.14,spanY:.22,spanX:.12,spanZ:.09},
+  "Gastrocnémien":          {y:.09,z:.14,spanY:.17,spanX:.10,spanZ:.08},
+  "Tibial antérieur":       {y:.09,z:.84,spanY:.18,spanX:.10,spanZ:.08}
+};
 
 const aliases={
   "Trapèze supérieur":["trapezius"],
@@ -62,6 +80,33 @@ function norm(s){
     .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
     .replace(/[._-]+/g," ").replace(/\s+/g," ").trim();
 }
+function regionLocalPoint(point){
+  if(!bodyLocalBox) return new THREE.Vector3(...(point.position||[0,0,0]));
+
+  const r=anatomicalRegions[point.muscle] || {y:.5,z:point.view==="front"?.85:.15,spanY:.12,spanX:.12,spanZ:.08};
+  const size=new THREE.Vector3();
+  bodyLocalBox.getSize(size);
+
+  const sideCenter=point.side==="gauche" ? .43 : .57;
+  const a=point.anchor || [.5,.5,.5];
+
+  const xn=sideCenter + (a[0]-.5)*r.spanX;
+  const yn=r.y + (a[1]-.5)*r.spanY;
+  const zn=r.z + (a[2]-.5)*r.spanZ;
+
+  return new THREE.Vector3(
+    bodyLocalBox.min.x + size.x*xn,
+    bodyLocalBox.min.y + size.y*yn,
+    bodyLocalBox.min.z + size.z*zn
+  );
+}
+
+function regionWorldPoint(point){
+  const local=regionLocalPoint(point);
+  anatomyRoot.updateMatrixWorld(true);
+  return anatomyRoot.localToWorld(local.clone());
+}
+
 function sideScore(name,side){
   const n=norm(name);
   if(side==="gauche") return /(^|\s)(left|l)(\s|$)/.test(n) || n.endsWith(" l") ? 2 : 0;
@@ -99,6 +144,8 @@ function makeFallback(){
   statusEl.textContent="Modèle simplifié (secours)";
   statusEl.classList.remove("ok");
   modelLoaded=false;
+  modelRoot.updateMatrixWorld(true);
+  bodyLocalBox=new THREE.Box3().setFromObject(modelRoot);
   rebuildMarkers();
 }
 
@@ -110,6 +157,7 @@ function normalizeModel(root){
   root.scale.setScalar(scale);
   root.position.set(-center.x*scale,-center.y*scale+0.15,-center.z*scale);
   root.updateMatrixWorld(true);
+  bodyLocalBox=new THREE.Box3().setFromObject(root);
 }
 
 const loader=new GLTFLoader();
@@ -179,24 +227,18 @@ function nearestMeshesToWorldPoint(worldPoint,count=1){
 }
 
 function resolvePointMeshes(point){
-  const named=matchMuscle(point);
-  if(named.length) return named;
-
-  const marker=markerByPointId.get(point.id);
-  if(marker){
-    markerRoot.updateMatrixWorld(true);
-    const world=marker.getWorldPosition(new THREE.Vector3());
-    return nearestMeshesToWorldPoint(world,1);
-  }
-  return [];
+  // Only accept an explicit anatomical-name match.
+  // A nearby but unrelated mesh is worse than no highlight at all.
+  return matchMuscle(point);
 }
+
 function rebuildMarkers(){
   clearMarkers();
   anatomyRoot.updateMatrixWorld(true);
   markerRoot.updateMatrixWorld(true);
 
   triggerPoints.forEach((p,i)=>{
-    let worldPos=new THREE.Vector3(...(p.position||[0,0,0]));
+    let worldPos=regionWorldPoint(p);
     const matched=matchMuscle(p);
 
     if(matched.length){
@@ -310,18 +352,18 @@ function focusOnMeshes(meshes){
 }
 function focusPoint(point){
   const meshes=resolvePointMeshes(point);
-  if(meshes.length) focusOnMeshes(meshes);
-  else {
-    const marker=markerByPointId.get(point.id);
-    if(marker){
-      const c=marker.getWorldPosition(new THREE.Vector3());
-      cameraTargetGoal.copy(c);
-      cameraDistanceGoal=1.25;
-    }
+  if(meshes.length){
+    focusOnMeshes(meshes);
+  } else {
+    resetHighlights();
+    cameraTargetGoal.copy(regionWorldPoint(point));
+    const r=anatomicalRegions[point.muscle];
+    cameraDistanceGoal=r ? 1.35 : 1.6;
   }
 }
 function resetCamera(){
   pendingFocusMeshes=null;
+  pendingFocusPoint=null;
   cameraTargetGoal.set(0,.15,0);
   cameraDistanceGoal=5.2;
   resetHighlights();
@@ -332,25 +374,14 @@ const viewAngles={front:0,back:Math.PI,left:-Math.PI/2,right:Math.PI/2};
 function schedulePointFocus(point){
   if(!point) return;
 
-  // Remove the previous highlight immediately, so a stale muscle never remains
-  // highlighted while the body is rotating toward the new selection.
   resetHighlights();
 
   const resolved=resolvePointMeshes(point);
   pendingFocusMeshes=resolved.length ? resolved : null;
+  pendingFocusPoint=point;
 
   targetRotY=viewAngles[point.view] ?? 0;
   targetRotX=-.04;
-
-  // Even when mesh naming is imperfect, keep the camera tied to the marker.
-  if(!pendingFocusMeshes){
-    const marker=markerByPointId.get(point.id);
-    if(marker){
-      const c=marker.getWorldPosition(new THREE.Vector3());
-      cameraTargetGoal.copy(c);
-      cameraDistanceGoal=1.25;
-    }
-  }
 }
 
 function angularDistance(a,b){
@@ -484,7 +515,7 @@ renderer.domElement.addEventListener("pointerup",e=>{
         const d=w.distanceTo(c);
         if(d<bestD){bestD=d;best=p;}
       }
-      matchedPoint=best;
+      if(bestD < 0.45) matchedPoint=best;
     }
 
     if(matchedPoint) selectPoint(matchedPoint,false);
@@ -514,10 +545,14 @@ function animate(){
 
   // First turn the body toward the correct side, then calculate the
   // muscle bounding box and zoom. This prevents zooming toward a stale position.
-  if(pendingFocusMeshes && angularDistance(rotY,targetRotY)<.035 && Math.abs(rotX-targetRotX)<.035){
+  if((pendingFocusMeshes || pendingFocusPoint) && angularDistance(rotY,targetRotY)<.035 && Math.abs(rotX-targetRotX)<.035){
     const meshes=pendingFocusMeshes;
+    const point=pendingFocusPoint;
     pendingFocusMeshes=null;
-    focusOnMeshes(meshes);
+    pendingFocusPoint=null;
+
+    if(meshes && meshes.length) focusOnMeshes(meshes);
+    else if(point) focusPoint(point);
   }
 
   // When focused, keep the camera target attached to the selected muscle
