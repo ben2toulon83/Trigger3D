@@ -39,6 +39,7 @@ let cameraTarget=new THREE.Vector3(0,0.25,0);
 let cameraTargetGoal=cameraTarget.clone();
 let cameraDistance=5.2;
 let cameraDistanceGoal=5.2;
+let pendingFocusMeshes=null;
 
 const aliases={
   "Trapèze supérieur":["trapezius"],
@@ -155,36 +156,47 @@ const markerMeshes=[];
 function clearMarkers(){ while(markerRoot.children.length) markerRoot.remove(markerRoot.children[0]); markerMeshes.length=0; }
 function rebuildMarkers(){
   clearMarkers();
+  anatomyRoot.updateMatrixWorld(true);
+  markerRoot.updateMatrixWorld(true);
+
   triggerPoints.forEach((p,i)=>{
-    let pos=new THREE.Vector3(...(p.position||[0,0,0]));
+    let worldPos=new THREE.Vector3(...(p.position||[0,0,0]));
     const matched=matchMuscle(p);
+
     if(matched.length){
       const box=new THREE.Box3();
       matched.forEach(m=>box.expandByObject(m));
-      const center=new THREE.Vector3(), size=new THREE.Vector3();
-      box.getCenter(center); box.getSize(size);
-      pos.copy(center);
+      const size=new THREE.Vector3();
+      box.getSize(size);
 
-      // Put the marker toward the outer surface rather than inside the muscle.
-      const sideSign = p.side === "gauche" ? -1 : 1;
-      const muscleName = norm(p.muscle);
-      if (/(pector|sternocleid|masseter|tibial)/.test(muscleName)) pos.z += Math.max(.015,size.z*.48);
-      else if (/(trapez|supra|infra|levator|quadratus|glute|piriform|ischio|gastro)/.test(muscleName)) pos.z -= Math.max(.015,size.z*.48);
-      pos.x += sideSign * Math.min(size.x*.10,.025);
-
-      // Small deterministic vertical offset keeps nearby markers readable.
-      const offset = ((i % 3) - 1) * Math.min(size.y*.08,.025);
-      pos.y += offset;
+      const a=p.anchor || [0.5,0.5,0.5];
+      worldPos.set(
+        box.min.x + size.x * a[0],
+        box.min.y + size.y * a[1],
+        box.min.z + size.z * a[2]
+      );
     }
+
+    // Box3 returns world coordinates. Convert them back into the local
+    // coordinate system of the rotating anatomy root.
+    const localPos=markerRoot.worldToLocal(worldPos.clone());
+
     const mesh=new THREE.Mesh(
-      new THREE.SphereGeometry(.020,18,12),
-      new THREE.MeshStandardMaterial({color:0xff3150,emissive:0x7a0718,emissiveIntensity:1.25,depthTest:true,depthWrite:true})
+      new THREE.SphereGeometry(.018,18,12),
+      new THREE.MeshStandardMaterial({
+        color:0xff3150,
+        emissive:0x7a0718,
+        emissiveIntensity:1.25,
+        depthTest:true,
+        depthWrite:true
+      })
     );
-    mesh.position.copy(pos);
+    mesh.position.copy(localPos);
     mesh.userData.point=p;
     markerRoot.add(mesh);
     markerMeshes.push(mesh);
   });
+
   updatePointVisibility();
 }
 
@@ -232,9 +244,23 @@ function focusPoint(point){
   if(meshes.length) focusOnMeshes(meshes);
 }
 function resetCamera(){
+  pendingFocusMeshes=null;
   cameraTargetGoal.set(0,.15,0);
   cameraDistanceGoal=5.2;
   resetHighlights();
+}
+
+const viewAngles={front:0,back:Math.PI,left:-Math.PI/2,right:Math.PI/2};
+
+function schedulePointFocus(point){
+  if(!point) return;
+  pendingFocusMeshes=matchMuscle(point);
+  targetRotY=viewAngles[point.view] ?? 0;
+  targetRotX=-.04;
+}
+
+function angularDistance(a,b){
+  return Math.abs(Math.atan2(Math.sin(a-b),Math.cos(a-b)));
 }
 
 function clearPain(){ while(painRoot.children.length) painRoot.remove(painRoot.children[0]); }
@@ -260,7 +286,7 @@ function selectPoint(point,zoom=true){
   document.querySelector("#detailCaution").textContent=point.caution;
   document.querySelector("#togglePain").textContent="Afficher la zone projetée";
   switchTab("explore");
-  if(zoom) focusPoint(point);
+  if(zoom) schedulePointFocus(point);
   if(filterMode==="selected") updatePointVisibility();
 }
 
@@ -268,13 +294,22 @@ document.querySelector("#togglePain").addEventListener("click",()=>{
   painVisible=!painVisible; if(painVisible) showPain(); else clearPain();
   document.querySelector("#togglePain").textContent=painVisible?"Masquer la zone projetée":"Afficher la zone projetée";
 });
-document.querySelector("#showMusclePoints").addEventListener("click",()=>{filterMode="selected";updatePointVisibility();focusPoint(selected);});
+document.querySelector("#showMusclePoints").addEventListener("click",()=>{
+  filterMode="selected";
+  updatePointVisibility();
+  if(selected) schedulePointFocus(selected);
+});
 document.querySelector("#showAllPoints").addEventListener("click",()=>{filterMode="all";updatePointVisibility();});
-document.querySelector("#focusSelection").addEventListener("click",()=>{if(selected) focusPoint(selected);});
-document.querySelector("#resetView").addEventListener("click",()=>{targetRotY=0;targetRotX=-.05;resetCamera();});
+document.querySelector("#focusSelection").addEventListener("click",()=>{if(selected) schedulePointFocus(selected);});
+document.querySelector("#resetView").addEventListener("click",()=>{
+  targetRotY=0;
+  targetRotX=-.05;
+  resetCamera();
+});
 document.querySelectorAll("[data-view]").forEach(btn=>btn.addEventListener("click",()=>{
-  const views={front:0,back:Math.PI,left:-Math.PI/2,right:Math.PI/2};
-  targetRotY=views[btn.dataset.view]??0; targetRotX=-.05;
+  targetRotY=viewAngles[btn.dataset.view]??0;
+  targetRotX=-.05;
+  resetCamera();
 }));
 
 function updatePointVisibility(){
@@ -322,7 +357,9 @@ renderer.domElement.style.touchAction="none";
 renderer.domElement.addEventListener("pointerdown",e=>{dragging=true;lastX=downX=e.clientX;lastY=downY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId);});
 renderer.domElement.addEventListener("pointermove",e=>{if(!dragging)return;targetRotY+=(e.clientX-lastX)*.009;targetRotX+=(e.clientY-lastY)*.005;targetRotX=Math.max(-.45,Math.min(.45,targetRotX));lastX=e.clientX;lastY=e.clientY;});
 renderer.domElement.addEventListener("pointerup",e=>{
-  dragging=false; try{renderer.domElement.releasePointerCapture(e.pointerId);}catch{}
+  dragging=false;
+  targetRotY=Math.atan2(Math.sin(targetRotY),Math.cos(targetRotY));
+  try{renderer.domElement.releasePointerCapture(e.pointerId);}catch{}
   if(Math.hypot(e.clientX-downX,e.clientY-downY)>5)return;
   const rect=renderer.domElement.getBoundingClientRect(); pointer.x=((e.clientX-rect.left)/rect.width)*2-1; pointer.y=-((e.clientY-rect.top)/rect.height)*2+1;
   raycaster.setFromCamera(pointer,camera);
@@ -338,17 +375,56 @@ renderer.domElement.addEventListener("pointerup",e=>{
     }
   }
 });
-renderer.domElement.addEventListener("wheel",e=>{e.preventDefault();cameraDistanceGoal=Math.max(.65,Math.min(7,cameraDistanceGoal+e.deltaY*.003));},{passive:false});
+renderer.domElement.addEventListener("dblclick",()=>{
+  targetRotY=0;
+  targetRotX=-.05;
+  resetCamera();
+});
+renderer.domElement.addEventListener("wheel",e=>{
+  e.preventDefault();
+  cameraDistanceGoal=Math.max(.75,Math.min(6.2,cameraDistanceGoal+e.deltaY*.003));
+},{passive:false});
 
 function resize(){const r=viewer.getBoundingClientRect();renderer.setSize(Math.max(1,r.width),Math.max(1,r.height),false);camera.aspect=Math.max(1,r.width)/Math.max(1,r.height);camera.updateProjectionMatrix();}
 window.addEventListener("resize",resize);resize();
 
 function animate(){
   requestAnimationFrame(animate);
-  rotX+=(targetRotX-rotX)*.1; rotY+=(targetRotY-rotY)*.1; anatomyRoot.rotation.set(rotX,rotY,0);
-  cameraTarget.lerp(cameraTargetGoal,.1); cameraDistance+=(cameraDistanceGoal-cameraDistance)*.1;
-  camera.position.set(cameraTarget.x,cameraTarget.y,cameraTarget.z+cameraDistance); camera.lookAt(cameraTarget);
-  markerMeshes.forEach((m,i)=>{const s=1+Math.sin(performance.now()/520+i)*.045;m.scale.setScalar(s);});
+
+  rotX+=(targetRotX-rotX)*.11;
+  const dy=Math.atan2(Math.sin(targetRotY-rotY),Math.cos(targetRotY-rotY));
+  rotY+=dy*.11;
+  anatomyRoot.rotation.set(rotX,rotY,0);
+  anatomyRoot.updateMatrixWorld(true);
+
+  // First turn the body toward the correct side, then calculate the
+  // muscle bounding box and zoom. This prevents zooming toward a stale position.
+  if(pendingFocusMeshes && angularDistance(rotY,targetRotY)<.035 && Math.abs(rotX-targetRotX)<.035){
+    const meshes=pendingFocusMeshes;
+    pendingFocusMeshes=null;
+    focusOnMeshes(meshes);
+  }
+
+  // When focused, keep the camera target attached to the selected muscle
+  // while the user rotates the anatomy.
+  if(selectedMuscleMeshes.length && cameraDistanceGoal<4){
+    const box=new THREE.Box3();
+    selectedMuscleMeshes.forEach(m=>box.expandByObject(m));
+    const c=new THREE.Vector3();
+    box.getCenter(c);
+    cameraTargetGoal.lerp(c,.35);
+  }
+
+  cameraTarget.lerp(cameraTargetGoal,.12);
+  cameraDistance+=(cameraDistanceGoal-cameraDistance)*.12;
+  camera.position.set(cameraTarget.x,cameraTarget.y,cameraTarget.z+cameraDistance);
+  camera.lookAt(cameraTarget);
+
+  markerMeshes.forEach((m,i)=>{
+    const pulse=1+Math.sin(performance.now()/520+i)*.04;
+    m.scale.setScalar(pulse);
+  });
+
   renderer.render(scene,camera);
 }
 animate();
