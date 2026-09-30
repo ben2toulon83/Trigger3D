@@ -74,8 +74,36 @@ const anatomicalRegions={
   "Temporal":                {y:.94,z:.60,spanY:.07,spanX:.09,spanZ:.14}
 };
 
-const noDirectHighlightMuscles=new Set([
-  "Grand dorsal"
+const directHighlightMuscles=new Set([
+  "Trapèze supérieur",
+  "Sterno-cléido-mastoïdien",
+  "Masséter",
+  "Supra-épineux",
+  "Infra-épineux",
+  "Élévateur de la scapula",
+  "Grand pectoral",
+  "Deltoïde",
+  "Grand fessier",
+  "Moyen fessier",
+  "Petit fessier",
+  "Piriforme",
+  "Gastrocnémien",
+  "Soléaire",
+  "Tibial antérieur",
+  "Droit fémoral",
+  "Vaste latéral",
+  "Tenseur du fascia lata",
+  "Temporal"
+]);
+
+const regionalOnlyMuscles=new Set([
+  "Carré des lombes",
+  "Grand dorsal",
+  "Rhomboïdes",
+  "Psoas-iliaque",
+  "Adducteurs",
+  "Ischio-jambiers",
+  "Scalènes"
 ]);
 
 const aliases={
@@ -187,7 +215,7 @@ function candidateMeshIsPlausible(mesh,point){
 }
 
 function matchMuscle(point){
-  if(noDirectHighlightMuscles.has(point.muscle)) return [];
+  if(!directHighlightMuscles.has(point.muscle)) return [];
   const list=aliases[point.muscle]||[point.muscle];
   const candidates=anatomyMeshes.filter(m=>{
     const n=norm(m.name || m.userData?.za_name || "");
@@ -639,7 +667,7 @@ function focusOnMeshes(meshes){
 }
 function focusPoint(point){
   userPanOffset.set(0,0,0);
-  if(noDirectHighlightMuscles.has(point.muscle)) resetHighlights();
+  if(!directHighlightMuscles.has(point.muscle)) resetHighlights();
   const meshes=resolvePointMeshes(point);
   if(meshes.length){
     focusOnMeshes(meshes);
@@ -647,7 +675,9 @@ function focusPoint(point){
     resetHighlights();
     cameraTargetGoal.copy(regionWorldPoint(point));
     const r=anatomicalRegions[point.muscle];
-    cameraDistanceGoal=r ? 1.35 : 1.6;
+    cameraDistanceGoal=regionalOnlyMuscles.has(point.muscle)
+      ? 1.55
+      : (r ? 1.35 : 1.6);
   }
 }
 function getWholeBodyBox(){
@@ -788,6 +818,20 @@ function showPain(){
   const m=new THREE.MeshBasicMaterial({color:0xf59e0b,transparent:true,opacity:.25,depthWrite:false,depthTest:false});
   const halo=new THREE.Mesh(g,m); halo.position.copy(center); halo.scale.set(1.7,2.3,.7); halo.renderOrder=19; painRoot.add(halo);
 }
+function updateFocusQuality(point){
+  const el=document.querySelector("#focusQuality");
+  if(!el || !point) return;
+
+  const exact=directHighlightMuscles.has(point.muscle) && matchMuscle(point).length>0;
+
+  el.textContent=exact
+    ? "Muscle 3D identifié"
+    : "Zone anatomique ciblée";
+
+  el.classList.toggle("exact",exact);
+  el.classList.toggle("regional",!exact);
+}
+
 function selectPoint(point,zoom=true){
   selected=point;
   filterMode="selected";
@@ -802,6 +846,7 @@ function selectPoint(point,zoom=true){
   document.querySelector("#detailLocation").textContent=point.location;
   document.querySelector("#detailCare").textContent=point.care;
   document.querySelector("#detailCaution").textContent=point.caution;
+  updateFocusQuality(point);
   document.querySelector("#togglePain").textContent="Afficher la zone projetée";
   switchTab("explore");
   if(zoom) schedulePointFocus(point);
