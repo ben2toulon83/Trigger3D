@@ -75,3 +75,51 @@ button{cursor:pointer}
   .quick-toggles{right:10px;top:10px;flex-direction:column}
   .status-badge{top:82px;right:10px}
 }
+
+.body-nav{
+  position:absolute;
+  left:18px;
+  top:72px;
+  z-index:7;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  padding:7px;
+  background:rgba(8,12,23,.72);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  backdrop-filter:blur(10px);
+}
+.body-nav button{
+  border:1px solid var(--border);
+  color:var(--text);
+  background:#111a2d;
+  border-radius:9px;
+  padding:7px 10px;
+  font-size:12px;
+  min-width:66px;
+}
+.body-nav button:hover{
+  border-color:#42557f;
+  background:#16213a;
+}
+.viewer-hint{
+  position:absolute;
+  left:18px;
+  bottom:78px;
+  font-size:11px;
+  color:#9da9c4;
+  z-index:6;
+}
+@media(max-width:900px){
+  .body-nav{
+    top:auto;
+    bottom:72px;
+    left:10px;
+    flex-direction:row;
+    max-width:calc(100% - 20px);
+    overflow-x:auto;
+  }
+  .body-nav button{min-width:auto;white-space:nowrap}
+  .viewer-hint{display:none}
+}
