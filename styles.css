@@ -21,7 +21,7 @@ button{cursor:pointer}
 .layout{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(360px,.8fr);min-height:calc(100vh - 76px)}
 .viewer-card{position:relative;min-height:calc(100vh - 76px);overflow:hidden}
 #viewer{position:absolute;inset:0;background:radial-gradient(circle at 50% 34%,#1d2b4d 0,#0a1327 52%,#05070f 100%)}
-.viewer-tools{position:absolute;left:50%;transform:translateX(-50%);bottom:24px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:8px;background:rgba(8,12,23,.74);border:1px solid rgba(255,255,255,.09);border-radius:16px;backdrop-filter:blur(12px)}
+.viewer-tools{position:absolute;left:50%;transform:translateX(-50%);bottom:24px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:8px;background:rgba(8,12,23,.82);border:1px solid rgba(255,255,255,.09);border-radius:16px;backdrop-filter:blur(12px);max-width:calc(100% - 28px);z-index:12}
 .viewer-tools button,.ghost,.tab,.chip,.small{border:1px solid var(--border);color:var(--text);background:#111a2d;border-radius:10px;padding:9px 12px}
 .viewer-tools button:hover,.ghost:hover,.tab:hover,.chip:hover,.small:hover{border-color:#42557f;background:#16213a}
 .legend{position:absolute;top:18px;left:18px;display:flex;gap:14px;color:#d9e2f5;font-size:12px;padding:9px 11px;background:rgba(8,12,23,.72);border:1px solid rgba(255,255,255,.08);border-radius:12px;backdrop-filter:blur(10px)}
@@ -122,4 +122,11 @@ button{cursor:pointer}
   }
   .body-nav button{min-width:auto;white-space:nowrap}
   .viewer-hint{display:none}
+}
+
+.tool-separator{
+  width:1px;
+  height:26px;
+  background:rgba(255,255,255,.16);
+  margin:0 2px;
 }
