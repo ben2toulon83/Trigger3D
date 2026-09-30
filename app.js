@@ -56,7 +56,20 @@ const anatomicalRegions={
   "Piriforme":              {y:.34,z:.15,spanY:.09,spanX:.13,spanZ:.09},
   "Ischio-jambiers":        {y:.23,z:.14,spanY:.22,spanX:.12,spanZ:.09},
   "Gastrocnémien":          {y:.09,z:.14,spanY:.17,spanX:.10,spanZ:.08},
-  "Tibial antérieur":       {y:.09,z:.84,spanY:.18,spanX:.10,spanZ:.08}
+  "Tibial antérieur":       {y:.09,z:.84,spanY:.18,spanX:.10,spanZ:.08},
+  "Deltoïde":                {y:.72,z:.50,spanY:.13,spanX:.12,spanZ:.20},
+  "Grand dorsal":            {y:.57,z:.16,spanY:.23,spanX:.18,spanZ:.09},
+  "Rhomboïdes":              {y:.67,z:.14,spanY:.15,spanX:.14,spanZ:.08},
+  "Grand fessier":           {y:.34,z:.15,spanY:.18,spanX:.18,spanZ:.11},
+  "Petit fessier":           {y:.40,z:.28,spanY:.12,spanX:.13,spanZ:.12},
+  "Soléaire":                {y:.08,z:.15,spanY:.19,spanX:.09,spanZ:.08},
+  "Psoas-iliaque":           {y:.48,z:.62,spanY:.18,spanX:.10,spanZ:.16},
+  "Adducteurs":              {y:.25,z:.55,spanY:.22,spanX:.10,spanZ:.12},
+  "Droit fémoral":           {y:.24,z:.82,spanY:.22,spanX:.11,spanZ:.09},
+  "Vaste latéral":           {y:.23,z:.68,spanY:.23,spanX:.12,spanZ:.13},
+  "Tenseur du fascia lata":  {y:.36,z:.58,spanY:.11,spanX:.10,spanZ:.12},
+  "Scalènes":                {y:.84,z:.54,spanY:.12,spanX:.09,spanZ:.15},
+  "Temporal":                {y:.94,z:.60,spanY:.07,spanX:.09,spanZ:.14}
 };
 
 const aliases={
@@ -72,7 +85,20 @@ const aliases={
   "Piriforme":["piriformis"],
   "Ischio-jambiers":["biceps femoris","semitendinosus","semimembranosus"],
   "Gastrocnémien":["gastrocnemius"],
-  "Tibial antérieur":["tibialis anterior","tibialis_anterior"]
+  "Tibial antérieur":["tibialis anterior","tibialis_anterior"],
+  "Deltoïde":["deltoid","deltoideus"],
+  "Grand dorsal":["latissimus dorsi","latissimus_dorsi"],
+  "Rhomboïdes":["rhomboid major","rhomboid minor","rhomboideus"],
+  "Grand fessier":["gluteus maximus","gluteus_maximus"],
+  "Petit fessier":["gluteus minimus","gluteus_minimus"],
+  "Soléaire":["soleus"],
+  "Psoas-iliaque":["psoas major","iliacus","iliopsoas"],
+  "Adducteurs":["adductor longus","adductor magnus","adductor brevis"],
+  "Droit fémoral":["rectus femoris","rectus_femoris"],
+  "Vaste latéral":["vastus lateralis","vastus_lateralis"],
+  "Tenseur du fascia lata":["tensor fasciae latae","tensor_fasciae_latae"],
+  "Scalènes":["scalenus anterior","scalenus medius","scalenus posterior","scalene"],
+  "Temporal":["temporalis","temporal muscle"]
 };
 
 function norm(s){
@@ -195,6 +221,7 @@ loader.load(MODEL_URL,gltf=>{
   statusEl.textContent="Anatomie 3D chargée";
   statusEl.classList.add("ok");
   rebuildMarkers();
+  fitWholeBody();
 },undefined,err=>{
   console.error(err);
   makeFallback();
@@ -361,12 +388,48 @@ function focusPoint(point){
     cameraDistanceGoal=r ? 1.35 : 1.6;
   }
 }
+function getWholeBodyBox(){
+  const box=new THREE.Box3();
+  if(modelRoot.children.length) box.setFromObject(modelRoot);
+  else box.setFromObject(anatomyRoot);
+  return box;
+}
+
+function wholeBodyFitDistance(){
+  const box=getWholeBodyBox();
+  if(box.isEmpty()) return 7.2;
+
+  const size=new THREE.Vector3();
+  box.getSize(size);
+
+  const verticalFov=THREE.MathUtils.degToRad(camera.fov);
+  const horizontalFov=2*Math.atan(Math.tan(verticalFov/2)*Math.max(camera.aspect,.25));
+  const dV=(size.y*.5)/Math.tan(verticalFov*.5);
+  const dH=(size.x*.5)/Math.tan(horizontalFov*.5);
+
+  return Math.max(dV,dH)*1.18 + size.z*.5;
+}
+
+function fitWholeBody(){
+  pendingFocusMeshes=null;
+  pendingFocusPoint=null;
+  resetHighlights();
+
+  const box=getWholeBodyBox();
+  if(!box.isEmpty()){
+    const center=new THREE.Vector3();
+    box.getCenter(center);
+    cameraTargetGoal.copy(center);
+  } else {
+    cameraTargetGoal.set(0,.15,0);
+  }
+  cameraDistanceGoal=wholeBodyFitDistance();
+}
+
 function resetCamera(){
   pendingFocusMeshes=null;
   pendingFocusPoint=null;
-  cameraTargetGoal.set(0,.15,0);
-  cameraDistanceGoal=5.2;
-  resetHighlights();
+  fitWholeBody();
 }
 
 const viewAngles={front:0,back:Math.PI,left:-Math.PI/2,right:Math.PI/2};
@@ -528,10 +591,16 @@ renderer.domElement.addEventListener("dblclick",()=>{
 });
 renderer.domElement.addEventListener("wheel",e=>{
   e.preventDefault();
-  cameraDistanceGoal=Math.max(.75,Math.min(6.2,cameraDistanceGoal+e.deltaY*.003));
+  cameraDistanceGoal=Math.max(.75,Math.min(10,cameraDistanceGoal+e.deltaY*.003));
 },{passive:false});
 
-function resize(){const r=viewer.getBoundingClientRect();renderer.setSize(Math.max(1,r.width),Math.max(1,r.height),false);camera.aspect=Math.max(1,r.width)/Math.max(1,r.height);camera.updateProjectionMatrix();}
+function resize(){
+  const r=viewer.getBoundingClientRect();
+  renderer.setSize(Math.max(1,r.width),Math.max(1,r.height),false);
+  camera.aspect=Math.max(1,r.width)/Math.max(1,r.height);
+  camera.updateProjectionMatrix();
+  if(!selectedMuscleMeshes.length && !pendingFocusPoint) cameraDistanceGoal=wholeBodyFitDistance();
+}
 window.addEventListener("resize",resize);resize();
 
 function animate(){
