@@ -355,6 +355,93 @@ function projectPointOnSurface(anchorWorld, meshes, view){
   return bestHit.point.clone().addScaledVector(normal,0.004);
 }
 
+
+function projectRegionPointOnBody(anchorWorld, view, side){
+  if(!anatomyMeshes.length) return anchorWorld.clone();
+
+  const bodyBox=getWholeBodyBox();
+  if(bodyBox.isEmpty()) return anchorWorld.clone();
+
+  const size=new THREE.Vector3();
+  bodyBox.getSize(size);
+  const margin=Math.max(size.x,size.y,size.z)*0.18+0.08;
+
+  const ray=new THREE.Raycaster();
+  const candidates=[];
+
+  const add=(origin,direction)=>candidates.push({
+    origin,
+    direction:direction.clone().normalize()
+  });
+
+  // Main ray based on the anatomical face.
+  if(view==="front"){
+    add(
+      new THREE.Vector3(anchorWorld.x,anchorWorld.y,bodyBox.max.z+margin),
+      new THREE.Vector3(0,0,-1)
+    );
+  } else if(view==="back"){
+    add(
+      new THREE.Vector3(anchorWorld.x,anchorWorld.y,bodyBox.min.z-margin),
+      new THREE.Vector3(0,0,1)
+    );
+  } else if(view==="left"){
+    add(
+      new THREE.Vector3(bodyBox.min.x-margin,anchorWorld.y,anchorWorld.z),
+      new THREE.Vector3(1,0,0)
+    );
+  } else if(view==="right"){
+    add(
+      new THREE.Vector3(bodyBox.max.x+margin,anchorWorld.y,anchorWorld.z),
+      new THREE.Vector3(-1,0,0)
+    );
+  }
+
+  // Side-aware fallback rays.
+  const xBias = side==="gauche" ? bodyBox.min.x-margin : bodyBox.max.x+margin;
+  const xDir  = side==="gauche" ? new THREE.Vector3(1,0,0) : new THREE.Vector3(-1,0,0);
+  add(new THREE.Vector3(xBias,anchorWorld.y,anchorWorld.z),xDir);
+
+  // General front/back fallbacks.
+  add(
+    new THREE.Vector3(anchorWorld.x,anchorWorld.y,bodyBox.max.z+margin),
+    new THREE.Vector3(0,0,-1)
+  );
+  add(
+    new THREE.Vector3(anchorWorld.x,anchorWorld.y,bodyBox.min.z-margin),
+    new THREE.Vector3(0,0,1)
+  );
+
+  let bestHit=null;
+  let bestScore=Infinity;
+
+  for(const c of candidates){
+    ray.set(c.origin,c.direction);
+    const hits=ray.intersectObjects(anatomyMeshes,false);
+    for(const hit of hits.slice(0,4)){
+      const dy=Math.abs(hit.point.y-anchorWorld.y);
+      const dx=Math.abs(hit.point.x-anchorWorld.x);
+      const dz=Math.abs(hit.point.z-anchorWorld.z);
+      const score=dy*2 + dx + dz*.35;
+      if(score<bestScore){
+        bestScore=score;
+        bestHit=hit;
+      }
+    }
+  }
+
+  if(!bestHit) return anchorWorld.clone();
+
+  const normal=new THREE.Vector3();
+  if(bestHit.face){
+    normal.copy(bestHit.face.normal).transformDirection(bestHit.object.matrixWorld);
+  } else {
+    normal.copy(bestHit.ray.direction).negate();
+  }
+
+  return bestHit.point.clone().addScaledVector(normal,0.004);
+}
+
 function rebuildMarkers(){
   clearMarkers();
   anatomyRoot.updateMatrixWorld(true);
@@ -380,6 +467,10 @@ function rebuildMarkers(){
       );
 
       worldPos.copy(projectPointOnSurface(anchorPoint,matched,p.view));
+    } else {
+      // When the muscle name is not available in the GLB, never leave
+      // the regional anchor floating in space: snap it to the visible body surface.
+      worldPos.copy(projectRegionPointOnBody(worldPos,p.view,p.side));
     }
 
     // Box3 returns world coordinates. Convert them back into the local
@@ -751,7 +842,7 @@ function animate(){
   camera.lookAt(cameraTarget);
 
   markerMeshes.forEach((m,i)=>{
-    const pulse=1+Math.sin(performance.now()/520+i)*.04;
+    const pulse=1+Math.sin(performance.now()/620+i)*.025;
     m.scale.setScalar(pulse);
   });
 
