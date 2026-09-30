@@ -21,7 +21,25 @@ button{cursor:pointer}
 .layout{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(360px,.8fr);min-height:calc(100vh - 76px)}
 .viewer-card{position:relative;min-height:calc(100vh - 76px);overflow:hidden}
 #viewer{position:absolute;inset:0;background:radial-gradient(circle at 50% 34%,#1d2b4d 0,#0a1327 52%,#05070f 100%)}
-.viewer-tools{position:absolute;left:50%;transform:translateX(-50%);bottom:24px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;padding:8px;background:rgba(8,12,23,.82);border:1px solid rgba(255,255,255,.09);border-radius:16px;backdrop-filter:blur(12px);max-width:calc(100% - 28px);z-index:12}
+.viewer-tools{
+  position:absolute;
+  left:18px;
+  top:50%;
+  transform:translateY(-50%);
+  bottom:auto;
+  display:grid;
+  grid-template-columns:repeat(2,minmax(70px,1fr));
+  gap:7px;
+  justify-content:stretch;
+  padding:9px;
+  background:rgba(8,12,23,.84);
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:16px;
+  backdrop-filter:blur(12px);
+  width:176px;
+  max-width:none;
+  z-index:12
+}
 .viewer-tools button,.ghost,.tab,.chip,.small{border:1px solid var(--border);color:var(--text);background:#111a2d;border-radius:10px;padding:9px 12px}
 .viewer-tools button:hover,.ghost:hover,.tab:hover,.chip:hover,.small:hover{border-color:#42557f;background:#16213a}
 .legend{position:absolute;top:18px;left:18px;display:flex;gap:14px;color:#d9e2f5;font-size:12px;padding:9px 11px;background:rgba(8,12,23,.72);border:1px solid rgba(255,255,255,.08);border-radius:12px;backdrop-filter:blur(10px)}
@@ -125,8 +143,27 @@ button{cursor:pointer}
 }
 
 .tool-separator{
-  width:1px;
-  height:26px;
+  grid-column:1 / -1;
+  width:100%;
+  height:1px;
   background:rgba(255,255,255,.16);
-  margin:0 2px;
+  margin:2px 0
+}
+
+@media(min-width:901px){
+  .viewer-hint{left:18px;bottom:18px}
+}
+@media(max-width:900px){
+  .viewer-tools{
+    left:50%;
+    top:auto;
+    bottom:12px;
+    transform:translateX(-50%);
+    display:flex;
+    flex-wrap:wrap;
+    width:calc(100% - 20px);
+    max-width:calc(100% - 20px);
+    justify-content:center;
+  }
+  .tool-separator{width:1px;height:24px;grid-column:auto}
 }
