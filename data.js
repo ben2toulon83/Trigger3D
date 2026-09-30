@@ -1,4 +1,4 @@
-export const triggerPoints = [
+const baseTriggerPoints = [
   {
     id:"trap-upper-left", muscle:"Trapèze supérieur", label:"Trapèze supérieur", side:"gauche",
     position:[-0.34,1.44,0.10], painZones:["nuque","tempe","épaule"],
@@ -208,6 +208,102 @@ export const triggerPoints = [
     caution:"Éviter si douleur osseuse ou gonflement inexpliqué."
   }
 ];
+
+const pointVariants = {
+  "trap-upper-left":[
+    {suffix:"-1",label:"Trapèze supérieur — point latéral",view:"back",anchor:[0.58,0.72,0.05]},
+    {suffix:"-2",label:"Trapèze supérieur — point médial",view:"back",anchor:[0.42,0.50,0.05]}
+  ],
+  "trap-upper-right":[
+    {suffix:"-1",label:"Trapèze supérieur — point latéral",view:"back",anchor:[0.42,0.72,0.05]},
+    {suffix:"-2",label:"Trapèze supérieur — point médial",view:"back",anchor:[0.58,0.50,0.05]}
+  ],
+  "scm-left":[
+    {suffix:"-1",label:"SCM — point supérieur",view:"left",anchor:[0.50,0.72,0.86]},
+    {suffix:"-2",label:"SCM — point inférieur",view:"left",anchor:[0.50,0.35,0.86]}
+  ],
+  "scm-right":[
+    {suffix:"-1",label:"SCM — point supérieur",view:"right",anchor:[0.50,0.72,0.86]},
+    {suffix:"-2",label:"SCM — point inférieur",view:"right",anchor:[0.50,0.35,0.86]}
+  ],
+  "infra-left":[
+    {suffix:"-1",label:"Infra-épineux — point supérieur",view:"back",anchor:[0.52,0.66,0.04]},
+    {suffix:"-2",label:"Infra-épineux — point inférieur",view:"back",anchor:[0.54,0.36,0.04]}
+  ],
+  "infra-right":[
+    {suffix:"-1",label:"Infra-épineux — point supérieur",view:"back",anchor:[0.48,0.66,0.04]},
+    {suffix:"-2",label:"Infra-épineux — point inférieur",view:"back",anchor:[0.46,0.36,0.04]}
+  ],
+  "pec-left":[
+    {suffix:"-1",label:"Grand pectoral — point supérieur",view:"front",anchor:[0.58,0.68,0.96]},
+    {suffix:"-2",label:"Grand pectoral — point moyen",view:"front",anchor:[0.60,0.42,0.96]}
+  ],
+  "pec-right":[
+    {suffix:"-1",label:"Grand pectoral — point supérieur",view:"front",anchor:[0.42,0.68,0.96]},
+    {suffix:"-2",label:"Grand pectoral — point moyen",view:"front",anchor:[0.40,0.42,0.96]}
+  ],
+  "ql-left":[
+    {suffix:"-1",label:"Carré des lombes — point supérieur",view:"back",anchor:[0.56,0.70,0.04]},
+    {suffix:"-2",label:"Carré des lombes — point inférieur",view:"back",anchor:[0.58,0.30,0.04]}
+  ],
+  "ql-right":[
+    {suffix:"-1",label:"Carré des lombes — point supérieur",view:"back",anchor:[0.44,0.70,0.04]},
+    {suffix:"-2",label:"Carré des lombes — point inférieur",view:"back",anchor:[0.42,0.30,0.04]}
+  ],
+  "glutemed-left":[
+    {suffix:"-1",label:"Moyen fessier — point antérieur",view:"back",anchor:[0.66,0.62,0.04]},
+    {suffix:"-2",label:"Moyen fessier — point moyen",view:"back",anchor:[0.52,0.48,0.04]},
+    {suffix:"-3",label:"Moyen fessier — point postérieur",view:"back",anchor:[0.38,0.38,0.04]}
+  ],
+  "glutemed-right":[
+    {suffix:"-1",label:"Moyen fessier — point antérieur",view:"back",anchor:[0.34,0.62,0.04]},
+    {suffix:"-2",label:"Moyen fessier — point moyen",view:"back",anchor:[0.48,0.48,0.04]},
+    {suffix:"-3",label:"Moyen fessier — point postérieur",view:"back",anchor:[0.62,0.38,0.04]}
+  ],
+  "piriformis-left":[
+    {suffix:"-1",label:"Piriforme — point médial",view:"back",anchor:[0.60,0.54,0.04]},
+    {suffix:"-2",label:"Piriforme — point latéral",view:"back",anchor:[0.40,0.46,0.04]}
+  ],
+  "piriformis-right":[
+    {suffix:"-1",label:"Piriforme — point médial",view:"back",anchor:[0.40,0.54,0.04]},
+    {suffix:"-2",label:"Piriforme — point latéral",view:"back",anchor:[0.60,0.46,0.04]}
+  ],
+  "ham-left":[
+    {suffix:"-1",label:"Ischio-jambiers — point proximal",view:"back",anchor:[0.50,0.68,0.04]},
+    {suffix:"-2",label:"Ischio-jambiers — point moyen",view:"back",anchor:[0.50,0.40,0.04]}
+  ],
+  "ham-right":[
+    {suffix:"-1",label:"Ischio-jambiers — point proximal",view:"back",anchor:[0.50,0.68,0.04]},
+    {suffix:"-2",label:"Ischio-jambiers — point moyen",view:"back",anchor:[0.50,0.40,0.04]}
+  ],
+  "gastroc-left":[
+    {suffix:"-1",label:"Gastrocnémien — point supérieur",view:"back",anchor:[0.50,0.66,0.04]},
+    {suffix:"-2",label:"Gastrocnémien — point inférieur",view:"back",anchor:[0.50,0.38,0.04]}
+  ],
+  "gastroc-right":[
+    {suffix:"-1",label:"Gastrocnémien — point supérieur",view:"back",anchor:[0.50,0.66,0.04]},
+    {suffix:"-2",label:"Gastrocnémien — point inférieur",view:"back",anchor:[0.50,0.38,0.04]}
+  ],
+  "tibant-left":[
+    {suffix:"-1",label:"Tibial antérieur — point supérieur",view:"front",anchor:[0.50,0.65,0.96]},
+    {suffix:"-2",label:"Tibial antérieur — point moyen",view:"front",anchor:[0.50,0.42,0.96]}
+  ],
+  "tibant-right":[
+    {suffix:"-1",label:"Tibial antérieur — point supérieur",view:"front",anchor:[0.50,0.65,0.96]},
+    {suffix:"-2",label:"Tibial antérieur — point moyen",view:"front",anchor:[0.50,0.42,0.96]}
+  ]
+};
+
+export const triggerPoints = baseTriggerPoints.flatMap(point => {
+  const variants = pointVariants[point.id];
+  if (!variants) {
+    const defaultView = ["Masséter"].includes(point.muscle)
+      ? (point.side === "gauche" ? "left" : "right")
+      : ["Supra-épineux","Élévateur de la scapula"].includes(point.muscle) ? "back" : "front";
+    return [{...point, view:defaultView, anchor:[0.50,0.50,defaultView==="front"?0.96:0.04]}];
+  }
+  return variants.map(v => ({...point, id:point.id+v.suffix, label:v.label, view:v.view, anchor:v.anchor}));
+});
 
 export const painAreas = [
   "tempe","nuque","mâchoire","visage","épaule","bras","avant-bras","thorax","lombaires","hanche","fesse","jambe","cuisse","genou","mollet","cheville","pied","plante du pied"
