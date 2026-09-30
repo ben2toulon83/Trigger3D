@@ -221,7 +221,7 @@ loader.load(MODEL_URL,gltf=>{
   statusEl.textContent="Anatomie 3D chargée";
   statusEl.classList.add("ok");
   rebuildMarkers();
-  fitWholeBody();
+  resetCamera();
 },undefined,err=>{
   console.error(err);
   makeFallback();
@@ -475,7 +475,7 @@ function wholeBodyFitDistance(){
   const dV=(size.y*.5)/Math.tan(verticalFov*.5);
   const dH=(size.x*.5)/Math.tan(horizontalFov*.5);
 
-  return Math.max(dV,dH)*1.18 + size.z*.5;
+  return Math.max(dV,dH)*1.42 + size.z*.65;
 }
 
 function fitWholeBody(){
@@ -494,10 +494,43 @@ function fitWholeBody(){
   cameraDistanceGoal=wholeBodyFitDistance();
 }
 
-function resetCamera(){
+function focusBodyBand(name){
+  const box=getWholeBodyBox();
+  if(box.isEmpty()) return;
+
+  const size=new THREE.Vector3();
+  const center=new THREE.Vector3();
+  box.getSize(size);
+  box.getCenter(center);
+
+  const presets={
+    whole:{y:.50,span:.95,distance:wholeBodyFitDistance()},
+    upper:{y:.78,span:.34,distance:2.75},
+    trunk:{y:.60,span:.34,distance:2.65},
+    pelvis:{y:.42,span:.26,distance:2.35},
+    legs:{y:.22,span:.38,distance:3.0},
+    feet:{y:.045,span:.16,distance:1.85}
+  };
+
+  const p=presets[name] || presets.whole;
+
   pendingFocusMeshes=null;
   pendingFocusPoint=null;
-  fitWholeBody();
+  resetHighlights();
+
+  cameraTargetGoal.set(
+    center.x,
+    box.min.y + size.y*p.y,
+    center.z
+  );
+
+  cameraDistanceGoal = name==="whole"
+    ? wholeBodyFitDistance()
+    : Math.max(p.distance, size.y*p.span*1.65);
+}
+
+function resetCamera(){
+  focusBodyBand("whole");
 }
 
 const viewAngles={front:0,back:Math.PI,left:-Math.PI/2,right:Math.PI/2};
@@ -570,6 +603,10 @@ document.querySelectorAll("[data-view]").forEach(btn=>btn.addEventListener("clic
   targetRotY=viewAngles[btn.dataset.view]??0;
   targetRotX=-.05;
   resetCamera();
+}));
+
+document.querySelectorAll("[data-body-nav]").forEach(btn=>btn.addEventListener("click",()=>{
+  focusBodyBand(btn.dataset.bodyNav);
 }));
 
 function updatePointVisibility(){
@@ -671,7 +708,9 @@ function resize(){
   renderer.setSize(Math.max(1,r.width),Math.max(1,r.height),false);
   camera.aspect=Math.max(1,r.width)/Math.max(1,r.height);
   camera.updateProjectionMatrix();
-  if(!selectedMuscleMeshes.length && !pendingFocusPoint) cameraDistanceGoal=wholeBodyFitDistance();
+  if(!selectedMuscleMeshes.length && !pendingFocusPoint){
+    cameraDistanceGoal=wholeBodyFitDistance();
+  }
 }
 window.addEventListener("resize",resize);resize();
 
