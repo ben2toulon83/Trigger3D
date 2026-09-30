@@ -613,7 +613,7 @@ function opticalCenterWorldOffset(){
 
   // Desired visual centre = centre of the free area to the right of the toolbar.
   const freeWidth=Math.max(100,r.width-occupied);
-  const desiredPx=occupied + freeWidth*0.54;
+  const desiredPx=occupied + freeWidth*0.47;
   const canvasCenterPx=r.width/2;
   const deltaPx=desiredPx-canvasCenterPx;
 
@@ -638,7 +638,7 @@ function wholeBodyFitDistance(){
   const dV=(size.y*.5)/Math.tan(verticalFov*.5);
   const dH=(size.x*.5)/Math.tan(horizontalFov*.5);
 
-  return Math.max(dV,dH)*1.42 + size.z*.65;
+  return Math.max(dV,dH)*1.08 + size.z*.35;
 }
 
 function fitWholeBody(){
@@ -652,7 +652,7 @@ function fitWholeBody(){
     box.getCenter(center);
     cameraTargetGoal.copy(center);
     cameraTargetGoal.x += opticalCenterWorldOffset();
-    cameraTargetGoal.y += 0.16;
+    cameraTargetGoal.y += 0.08;
   } else {
     cameraTargetGoal.set(0,.15,0);
   }
@@ -685,7 +685,7 @@ function focusBodyBand(name){
 
   cameraTargetGoal.set(
     center.x + opticalCenterWorldOffset(),
-    box.min.y + size.y*p.y + (name==="whole" ? 0.16 : 0),
+    box.min.y + size.y*p.y + (name==="whole" ? 0.08 : 0),
     center.z
   );
   userPanOffset.set(0,0,0);
@@ -764,9 +764,12 @@ document.querySelector("#showMusclePoints").addEventListener("click",()=>{
 document.querySelector("#showAllPoints").addEventListener("click",()=>{filterMode="all";updatePointVisibility();});
 document.querySelector("#focusSelection").addEventListener("click",()=>{if(selected) schedulePointFocus(selected);});
 document.querySelector("#resetView").addEventListener("click",()=>{
+  currentView="front";
   targetRotY=0;
   targetRotX=-.05;
+  userPanOffset.set(0,0,0);
   resetCamera();
+  updatePointVisibility();
 });
 document.querySelectorAll("[data-view]").forEach(btn=>btn.addEventListener("click",()=>{
   currentView=btn.dataset.view;
@@ -1013,7 +1016,7 @@ function resize(){
         const center=new THREE.Vector3();
         box.getCenter(center);
         center.x+=opticalCenterWorldOffset();
-        center.y+=0.16;
+        center.y+=0.08;
         cameraTargetGoal.copy(center);
       }
     }
