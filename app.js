@@ -60,7 +60,7 @@ const anatomicalRegions={
   "Gastrocnémien":          {y:.09,z:.14,spanY:.17,spanX:.08,spanZ:.08,xLeft:.39,xRight:.61},
   "Tibial antérieur":       {y:.09,z:.84,spanY:.18,spanX:.08,spanZ:.08,xLeft:.39,xRight:.61},
   "Deltoïde":                {y:.72,z:.50,spanY:.13,spanX:.08,spanZ:.20,xLeft:.27,xRight:.73},
-  "Grand dorsal":            {y:.57,z:.16,spanY:.23,spanX:.12,spanZ:.09,xLeft:.40,xRight:.60},
+  "Grand dorsal":            {y:.58,z:.18,spanY:.22,spanX:.12,spanZ:.10,xLeft:.39,xRight:.61},
   "Rhomboïdes":              {y:.67,z:.14,spanY:.15,spanX:.14,spanZ:.08},
   "Grand fessier":           {y:.34,z:.15,spanY:.18,spanX:.10,spanZ:.11,xLeft:.42,xRight:.58},
   "Petit fessier":           {y:.40,z:.28,spanY:.12,spanX:.09,spanZ:.12,xLeft:.40,xRight:.60},
@@ -73,6 +73,10 @@ const anatomicalRegions={
   "Scalènes":                {y:.84,z:.54,spanY:.12,spanX:.09,spanZ:.15},
   "Temporal":                {y:.94,z:.60,spanY:.07,spanX:.09,spanZ:.14}
 };
+
+const noDirectHighlightMuscles=new Set([
+  "Grand dorsal"
+]);
 
 const aliases={
   "Trapèze supérieur":["trapezius"],
@@ -183,6 +187,7 @@ function candidateMeshIsPlausible(mesh,point){
 }
 
 function matchMuscle(point){
+  if(noDirectHighlightMuscles.has(point.muscle)) return [];
   const list=aliases[point.muscle]||[point.muscle];
   const candidates=anatomyMeshes.filter(m=>{
     const n=norm(m.name || m.userData?.za_name || "");
@@ -634,6 +639,7 @@ function focusOnMeshes(meshes){
 }
 function focusPoint(point){
   userPanOffset.set(0,0,0);
+  if(noDirectHighlightMuscles.has(point.muscle)) resetHighlights();
   const meshes=resolvePointMeshes(point);
   if(meshes.length){
     focusOnMeshes(meshes);
