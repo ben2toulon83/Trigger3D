@@ -901,12 +901,23 @@ document.querySelector("#showMusclePoints").addEventListener("click",()=>{
   updatePointVisibility();
   if(selected) schedulePointFocus(selected);
 });
-document.querySelector("#showAllPoints").addEventListener("click",()=>{
+function leaveFocusMode(){
   filterMode="all";
+  resetHighlights();
+  markerMeshes.forEach(m=>{
+    m.material.depthTest=true;
+    m.material.depthWrite=true;
+    m.renderOrder=5;
+  });
   updatePointVisibility();
+}
+
+document.querySelector("#showAllPoints").addEventListener("click",()=>{
+  leaveFocusMode();
 });
 document.querySelector("#focusSelection").addEventListener("click",()=>{if(selected) schedulePointFocus(selected);});
 document.querySelector("#resetView").addEventListener("click",()=>{
+  leaveFocusMode();
   currentView="front";
   targetRotY=0;
   targetRotX=-.05;
@@ -915,6 +926,7 @@ document.querySelector("#resetView").addEventListener("click",()=>{
   updatePointVisibility();
 });
 document.querySelectorAll("[data-view]").forEach(btn=>btn.addEventListener("click",()=>{
+  leaveFocusMode();
   currentView=btn.dataset.view;
   targetRotY=viewAngles[currentView]??0;
   targetRotX=-.05;
@@ -923,6 +935,7 @@ document.querySelectorAll("[data-view]").forEach(btn=>btn.addEventListener("clic
 }));
 
 document.querySelectorAll("[data-body-nav]").forEach(btn=>btn.addEventListener("click",()=>{
+  leaveFocusMode();
   focusBodyBand(btn.dataset.bodyNav);
 }));
 
@@ -1236,7 +1249,7 @@ function animate(){
       selected &&
       mp.muscle===selected.muscle &&
       (!selected.side || mp.side===selected.side)
-    ) ? 1.34 : 1;
+    ) ? 1.12 : 1;
     m.scale.setScalar(pulse*profileScale*selectionScale);
   });
 
