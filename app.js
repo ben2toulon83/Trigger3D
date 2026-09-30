@@ -52,22 +52,22 @@ const anatomicalRegions={
   "Élévateur de la scapula":{y:.78,z:.14,spanY:.14,spanX:.11,spanZ:.08},
   "Grand pectoral":         {y:.69,z:.86,spanY:.18,spanX:.20,spanZ:.09},
   "Carré des lombes":       {y:.51,z:.16,spanY:.16,spanX:.12,spanZ:.10},
-  "Moyen fessier":          {y:.38,z:.16,spanY:.14,spanX:.16,spanZ:.11},
-  "Piriforme":              {y:.34,z:.15,spanY:.09,spanX:.13,spanZ:.09},
-  "Ischio-jambiers":        {y:.23,z:.14,spanY:.22,spanX:.12,spanZ:.09},
-  "Gastrocnémien":          {y:.09,z:.14,spanY:.17,spanX:.10,spanZ:.08},
-  "Tibial antérieur":       {y:.09,z:.84,spanY:.18,spanX:.10,spanZ:.08},
-  "Deltoïde":                {y:.72,z:.50,spanY:.13,spanX:.12,spanZ:.20},
-  "Grand dorsal":            {y:.57,z:.16,spanY:.23,spanX:.18,spanZ:.09},
+  "Moyen fessier":          {y:.38,z:.16,spanY:.14,spanX:.10,spanZ:.11,xLeft:.40,xRight:.60},
+  "Piriforme":              {y:.34,z:.15,spanY:.09,spanX:.09,spanZ:.09,xLeft:.44,xRight:.56},
+  "Ischio-jambiers":        {y:.23,z:.14,spanY:.22,spanX:.09,spanZ:.09,xLeft:.40,xRight:.60},
+  "Gastrocnémien":          {y:.09,z:.14,spanY:.17,spanX:.08,spanZ:.08,xLeft:.39,xRight:.61},
+  "Tibial antérieur":       {y:.09,z:.84,spanY:.18,spanX:.08,spanZ:.08,xLeft:.39,xRight:.61},
+  "Deltoïde":                {y:.72,z:.50,spanY:.13,spanX:.08,spanZ:.20,xLeft:.27,xRight:.73},
+  "Grand dorsal":            {y:.57,z:.16,spanY:.23,spanX:.12,spanZ:.09,xLeft:.40,xRight:.60},
   "Rhomboïdes":              {y:.67,z:.14,spanY:.15,spanX:.14,spanZ:.08},
-  "Grand fessier":           {y:.34,z:.15,spanY:.18,spanX:.18,spanZ:.11},
-  "Petit fessier":           {y:.40,z:.28,spanY:.12,spanX:.13,spanZ:.12},
-  "Soléaire":                {y:.08,z:.15,spanY:.19,spanX:.09,spanZ:.08},
+  "Grand fessier":           {y:.34,z:.15,spanY:.18,spanX:.10,spanZ:.11,xLeft:.42,xRight:.58},
+  "Petit fessier":           {y:.40,z:.28,spanY:.12,spanX:.09,spanZ:.12,xLeft:.40,xRight:.60},
+  "Soléaire":                {y:.08,z:.15,spanY:.19,spanX:.08,spanZ:.08,xLeft:.39,xRight:.61},
   "Psoas-iliaque":           {y:.48,z:.62,spanY:.18,spanX:.10,spanZ:.16},
-  "Adducteurs":              {y:.25,z:.55,spanY:.22,spanX:.10,spanZ:.12},
-  "Droit fémoral":           {y:.24,z:.82,spanY:.22,spanX:.11,spanZ:.09},
-  "Vaste latéral":           {y:.23,z:.68,spanY:.23,spanX:.12,spanZ:.13},
-  "Tenseur du fascia lata":  {y:.36,z:.58,spanY:.11,spanX:.10,spanZ:.12},
+  "Adducteurs":              {y:.25,z:.55,spanY:.22,spanX:.08,spanZ:.12,xLeft:.43,xRight:.57},
+  "Droit fémoral":           {y:.24,z:.82,spanY:.22,spanX:.08,spanZ:.09,xLeft:.40,xRight:.60},
+  "Vaste latéral":           {y:.23,z:.68,spanY:.23,spanX:.08,spanZ:.13,xLeft:.37,xRight:.63},
+  "Tenseur du fascia lata":  {y:.36,z:.58,spanY:.11,spanX:.08,spanZ:.12,xLeft:.35,xRight:.65},
   "Scalènes":                {y:.84,z:.54,spanY:.12,spanX:.09,spanZ:.15},
   "Temporal":                {y:.94,z:.60,spanY:.07,spanX:.09,spanZ:.14}
 };
@@ -113,7 +113,9 @@ function regionLocalPoint(point){
   const size=new THREE.Vector3();
   bodyLocalBox.getSize(size);
 
-  const sideCenter=point.side==="gauche" ? .43 : .57;
+  const defaultLeft=.43;
+  const defaultRight=.57;
+  const sideCenter=point.side==="gauche" ? (r.xLeft ?? defaultLeft) : (r.xRight ?? defaultRight);
   const a=point.anchor || [.5,.5,.5];
 
   const xn=sideCenter + (a[0]-.5)*r.spanX;
@@ -430,7 +432,35 @@ function projectRegionPointOnBody(anchorWorld, view, side){
     }
   }
 
-  if(!bestHit) return anchorWorld.clone();
+  if(!bestHit){
+    const nearest=nearestMeshesToWorldPoint(anchorWorld,6);
+    let nearestHit=null;
+    let nearestScore=Infinity;
+
+    for(const mesh of nearest){
+      const box=new THREE.Box3().setFromObject(mesh);
+      const target=new THREE.Vector3();
+      box.getCenter(target);
+
+      const dir=target.clone().sub(anchorWorld);
+      const dist=dir.length();
+      if(dist<1e-4) continue;
+
+      ray.set(anchorWorld.clone(),dir.normalize());
+      const hits=ray.intersectObject(mesh,false);
+
+      if(hits.length && hits[0].distance<=dist+0.5){
+        const score=hits[0].point.distanceTo(anchorWorld);
+        if(score<nearestScore){
+          nearestScore=score;
+          nearestHit=hits[0];
+        }
+      }
+    }
+
+    if(!nearestHit) return anchorWorld.clone();
+    bestHit=nearestHit;
+  }
 
   const normal=new THREE.Vector3();
   if(bestHit.face){
