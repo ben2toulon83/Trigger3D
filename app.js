@@ -652,6 +652,7 @@ function fitWholeBody(){
     box.getCenter(center);
     cameraTargetGoal.copy(center);
     cameraTargetGoal.x += opticalCenterWorldOffset();
+    cameraTargetGoal.y += 0.16;
   } else {
     cameraTargetGoal.set(0,.15,0);
   }
@@ -684,7 +685,7 @@ function focusBodyBand(name){
 
   cameraTargetGoal.set(
     center.x + opticalCenterWorldOffset(),
-    box.min.y + size.y*p.y,
+    box.min.y + size.y*p.y + (name==="whole" ? 0.16 : 0),
     center.z
   );
   userPanOffset.set(0,0,0);
@@ -801,6 +802,45 @@ function pointVisibleForView(point){
 
   // Free rotation: let depth testing decide visibility.
   return true;
+}
+
+
+const occlusionRaycaster=new THREE.Raycaster();
+
+function markerOccludedByBody(marker){
+  if(!marker || !marker.visible || !anatomyMeshes.length) return false;
+
+  const worldPos=marker.getWorldPosition(new THREE.Vector3());
+  const dir=worldPos.clone().sub(camera.position);
+  const markerDistance=dir.length();
+
+  if(markerDistance<1e-4) return false;
+
+  occlusionRaycaster.set(camera.position,dir.normalize());
+  occlusionRaycaster.far=Math.max(0,markerDistance-0.008);
+
+  const hits=occlusionRaycaster.intersectObjects(anatomyMeshes,false);
+  return hits.length>0;
+}
+
+function refreshDynamicMarkerVisibility(){
+  // Canonical views already use explicit filtering.
+  // In free rotation, additionally hide markers physically behind the body.
+  if(currentView!=="free") return;
+
+  markerMeshes.forEach(mesh=>{
+    const p=mesh.userData.point;
+    const allowedByFilter=filterMode==="all" || (selected && p.muscle===selected.muscle);
+
+    if(!allowedByFilter){
+      mesh.visible=false;
+      return;
+    }
+
+    // Temporarily enable so world position can be tested.
+    mesh.visible=true;
+    mesh.visible=!markerOccludedByBody(mesh);
+  });
 }
 
 function updatePointVisibility(){
@@ -973,6 +1013,7 @@ function resize(){
         const center=new THREE.Vector3();
         box.getCenter(center);
         center.x+=opticalCenterWorldOffset();
+        center.y+=0.16;
         cameraTargetGoal.copy(center);
       }
     }
@@ -1016,6 +1057,8 @@ function animate(){
   cameraDistance+=(cameraDistanceGoal-cameraDistance)*.12;
   camera.position.set(cameraTarget.x,cameraTarget.y,cameraTarget.z+cameraDistance);
   camera.lookAt(cameraTarget);
+
+  refreshDynamicMarkerVisibility();
 
   markerMeshes.forEach((m,i)=>{
     const pulse=1+Math.sin(performance.now()/620+i)*.025;
