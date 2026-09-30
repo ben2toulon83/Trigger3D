@@ -143,17 +143,67 @@ function sideScore(name,side){
   if(side==="droit") return /(^|\s)(right|r)(\s|$)/.test(n) || n.endsWith(" r") ? 2 : 0;
   return 0;
 }
+
+function candidateMeshIsPlausible(mesh,point){
+  if(!mesh || !bodyLocalBox) return true;
+
+  const bodySize=new THREE.Vector3();
+  bodyLocalBox.getSize(bodySize);
+
+  const box=new THREE.Box3().setFromObject(mesh);
+  const size=new THREE.Vector3();
+  box.getSize(size);
+
+  const bodyCenterX=(bodyLocalBox.min.x+bodyLocalBox.max.x)/2;
+
+  // A unilateral trigger should not highlight a mesh spanning most of both sides.
+  const crossesMidline=box.min.x<bodyCenterX && box.max.x>bodyCenterX;
+  const tooWide=size.x>bodySize.x*.34;
+
+  if(point.side && crossesMidline && tooWide){
+    return false;
+  }
+
+  // Reject clearly oversized structures for a local muscle focus.
+  if(size.y>bodySize.y*.55 || size.x>bodySize.x*.60){
+    return false;
+  }
+
+  // Candidate centre should remain reasonably close to the anatomical region.
+  const centre=new THREE.Vector3();
+  box.getCenter(centre);
+  const expected=regionWorldPoint(point);
+  const maxDist=Math.max(bodySize.y*.18,0.35);
+
+  if(centre.distanceTo(expected)>maxDist){
+    return false;
+  }
+
+  return true;
+}
+
 function matchMuscle(point){
   const list=aliases[point.muscle]||[point.muscle];
   const candidates=anatomyMeshes.filter(m=>{
     const n=norm(m.name || m.userData?.za_name || "");
     return list.some(a=>n.includes(norm(a)));
   });
+
   if(!candidates.length) return [];
-  const scored=[...candidates].sort((a,b)=>sideScore(b.name,point.side)-sideScore(a.name,point.side));
+
+  const plausible=candidates.filter(m=>candidateMeshIsPlausible(m,point));
+  const pool=plausible.length ? plausible : [];
+
+  if(!pool.length) return [];
+
+  const scored=[...pool].sort((a,b)=>sideScore(b.name,point.side)-sideScore(a.name,point.side));
   const bestScore=sideScore(scored[0].name,point.side);
-  return bestScore>0 ? scored.filter(x=>sideScore(x.name,point.side)===bestScore) : scored;
+
+  return bestScore>0
+    ? scored.filter(x=>sideScore(x.name,point.side)===bestScore)
+    : scored;
 }
+
 
 function makeFallback(){
   modelRoot.clear();
@@ -638,7 +688,7 @@ function wholeBodyFitDistance(){
   const dV=(size.y*.5)/Math.tan(verticalFov*.5);
   const dH=(size.x*.5)/Math.tan(horizontalFov*.5);
 
-  return Math.max(dV,dH)*1.08 + size.z*.35;
+  return Math.max(dV,dH)*1.15 + size.z*.40;
 }
 
 function fitWholeBody(){
@@ -881,7 +931,12 @@ const muscleList=document.querySelector("#muscleList");
 muscles.forEach(name=>{
   const list=triggerPoints.filter(p=>p.muscle===name); const c=document.createElement("div");c.className="result-card"; const b=document.createElement("button");
   b.innerHTML="<strong>"+name+"</strong><small>"+list.length+" point(s)</small>";
-  b.addEventListener("click",()=>{selectPoint(list[0],true);filterMode="selected";updatePointVisibility();});
+  b.addEventListener("click",()=>{
+    resetHighlights();
+    selectPoint(list[0],true);
+    filterMode="selected";
+    updatePointVisibility();
+  });
   c.appendChild(b); muscleList.appendChild(c);
 });
 document.querySelector("#statPoints").textContent=String(triggerPoints.length);
