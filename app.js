@@ -901,7 +901,10 @@ document.querySelector("#showMusclePoints").addEventListener("click",()=>{
   updatePointVisibility();
   if(selected) schedulePointFocus(selected);
 });
-document.querySelector("#showAllPoints").addEventListener("click",()=>{filterMode="all";updatePointVisibility();});
+document.querySelector("#showAllPoints").addEventListener("click",()=>{
+  filterMode="all";
+  updatePointVisibility();
+});
 document.querySelector("#focusSelection").addEventListener("click",()=>{if(selected) schedulePointFocus(selected);});
 document.querySelector("#resetView").addEventListener("click",()=>{
   currentView="front";
@@ -967,23 +970,21 @@ function markerOccludedByBody(marker){
 }
 
 function refreshDynamicMarkerVisibility(){
-  // In free rotation, hide points physically behind the body.
-  // In selected-muscle mode, do the same regardless of the canonical view.
-  if(currentView!=="free" && filterMode!=="selected") return;
+  // In Focus sélection, the chosen trigger points stay visible at all times.
+  if(filterMode==="selected" && selected){
+    markerMeshes.forEach(mesh=>{
+      const p=mesh.userData.point;
+      mesh.visible=
+        p.muscle===selected.muscle &&
+        (!selected.side || p.side===selected.side);
+    });
+    return;
+  }
+
+  // Occlusion is only useful during free exploration.
+  if(currentView!=="free") return;
 
   markerMeshes.forEach(mesh=>{
-    const p=mesh.userData.point;
-    const allowedByFilter=filterMode==="all" || (
-      selected &&
-      p.muscle===selected.muscle &&
-      (!selected.side || p.side===selected.side)
-    );
-
-    if(!allowedByFilter){
-      mesh.visible=false;
-      return;
-    }
-
     mesh.visible=true;
     mesh.visible=!markerOccludedByBody(mesh);
   });
@@ -994,14 +995,20 @@ function updatePointVisibility(){
     const p=mesh.userData.point;
 
     if(filterMode==="selected" && selected){
-      // Focus mode shows the selected muscle and prioritises the selected
-      // anatomical side so the view remains unambiguous.
       const sameMuscle=p.muscle===selected.muscle;
       const sameSide=!selected.side || p.side===selected.side;
       mesh.visible=sameMuscle && sameSide;
+
+      // Focus points must remain readable on top of the muscle surface.
+      mesh.material.depthTest=false;
+      mesh.material.depthWrite=false;
+      mesh.renderOrder=100;
       return;
     }
 
+    mesh.material.depthTest=true;
+    mesh.material.depthWrite=true;
+    mesh.renderOrder=5;
     mesh.visible=pointVisibleForView(p);
   });
 
