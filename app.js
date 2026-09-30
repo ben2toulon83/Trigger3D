@@ -74,6 +74,41 @@ const anatomicalRegions={
   "Temporal":                {y:.94,z:.60,spanY:.07,spanX:.09,spanZ:.14}
 };
 
+const preferredFocusView={
+  "Deltoïde":"side",
+  "Sterno-cléido-mastoïdien":"side",
+  "Masséter":"side",
+  "Temporal":"side",
+  "Trapèze supérieur":"back",
+  "Supra-épineux":"back",
+  "Infra-épineux":"back",
+  "Élévateur de la scapula":"back",
+  "Rhomboïdes":"back",
+  "Grand dorsal":"back",
+  "Carré des lombes":"back",
+  "Grand pectoral":"front",
+  "Grand fessier":"back",
+  "Moyen fessier":"back",
+  "Petit fessier":"back",
+  "Piriforme":"back",
+  "Ischio-jambiers":"back",
+  "Gastrocnémien":"back",
+  "Soléaire":"back",
+  "Tibial antérieur":"front",
+  "Droit fémoral":"front",
+  "Vaste latéral":"side",
+  "Tenseur du fascia lata":"side",
+  "Psoas-iliaque":"front",
+  "Adducteurs":"front",
+  "Scalènes":"side"
+};
+
+function bestViewForPoint(point){
+  const pref=preferredFocusView[point.muscle];
+  if(pref==="side") return point.side==="gauche" ? "left" : "right";
+  return pref || point.view || "front";
+}
+
 const directHighlightMuscles=new Set([
   "Trapèze supérieur",
   "Sterno-cléido-mastoïdien",
@@ -797,9 +832,14 @@ function schedulePointFocus(point){
   pendingFocusMeshes=resolved.length ? resolved : null;
   pendingFocusPoint=point;
 
-  currentView=point.view || currentView;
+  currentView=bestViewForPoint(point);
   targetRotY=viewAngles[currentView] ?? 0;
   targetRotX=-.04;
+
+  // Start from a local region target immediately so the transition feels intentional.
+  cameraTargetGoal.copy(regionWorldPoint(point));
+  cameraDistanceGoal=regionalOnlyMuscles.has(point.muscle) ? 1.55 : 1.30;
+
   updatePointVisibility();
 }
 
@@ -933,7 +973,11 @@ function refreshDynamicMarkerVisibility(){
 
   markerMeshes.forEach(mesh=>{
     const p=mesh.userData.point;
-    const allowedByFilter=filterMode==="all" || (selected && p.muscle===selected.muscle);
+    const allowedByFilter=filterMode==="all" || (
+      selected &&
+      p.muscle===selected.muscle &&
+      (!selected.side || p.side===selected.side)
+    );
 
     if(!allowedByFilter){
       mesh.visible=false;
@@ -950,10 +994,11 @@ function updatePointVisibility(){
     const p=mesh.userData.point;
 
     if(filterMode==="selected" && selected){
-      // A muscle focus must never hide the trigger points belonging to
-      // the selected muscle. Depth testing / occlusion will handle the
-      // far side when the model is rotated.
-      mesh.visible=p.muscle===selected.muscle;
+      // Focus mode shows the selected muscle and prioritises the selected
+      // anatomical side so the view remains unambiguous.
+      const sameMuscle=p.muscle===selected.muscle;
+      const sameSide=!selected.side || p.side===selected.side;
+      mesh.visible=sameMuscle && sameSide;
       return;
     }
 
@@ -1178,7 +1223,13 @@ function animate(){
   markerMeshes.forEach((m,i)=>{
     const pulse=1+Math.sin(performance.now()/620+i)*.025;
     const profileScale=(currentView==="left" || currentView==="right") ? .78 : 1;
-    const selectionScale=(filterMode==="selected" && selected && m.userData.point.muscle===selected.muscle) ? 1.22 : 1;
+    const mp=m.userData.point;
+    const selectionScale=(
+      filterMode==="selected" &&
+      selected &&
+      mp.muscle===selected.muscle &&
+      (!selected.side || mp.side===selected.side)
+    ) ? 1.34 : 1;
     m.scale.setScalar(pulse*profileScale*selectionScale);
   });
 
