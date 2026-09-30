@@ -837,7 +837,6 @@ function selectPoint(point,zoom=true){
   filterMode="selected";
   painVisible=false;
   clearPain();
-  updatePointVisibility();
   document.querySelector("#emptyState").hidden=true;
   document.querySelector("#detailCard").hidden=false;
   document.querySelector("#detailTitle").textContent=point.label;
@@ -928,9 +927,9 @@ function markerOccludedByBody(marker){
 }
 
 function refreshDynamicMarkerVisibility(){
-  // Canonical views already use explicit filtering.
-  // In free rotation, additionally hide markers physically behind the body.
-  if(currentView!=="free") return;
+  // In free rotation, hide points physically behind the body.
+  // In selected-muscle mode, do the same regardless of the canonical view.
+  if(currentView!=="free" && filterMode!=="selected") return;
 
   markerMeshes.forEach(mesh=>{
     const p=mesh.userData.point;
@@ -941,7 +940,6 @@ function refreshDynamicMarkerVisibility(){
       return;
     }
 
-    // Temporarily enable so world position can be tested.
     mesh.visible=true;
     mesh.visible=!markerOccludedByBody(mesh);
   });
@@ -950,10 +948,18 @@ function refreshDynamicMarkerVisibility(){
 function updatePointVisibility(){
   markerMeshes.forEach(mesh=>{
     const p=mesh.userData.point;
-    const allowedByFilter=filterMode==="all" || (selected && p.muscle===selected.muscle);
-    const allowedByView=pointVisibleForView(p);
-    mesh.visible=allowedByFilter && allowedByView;
+
+    if(filterMode==="selected" && selected){
+      // A muscle focus must never hide the trigger points belonging to
+      // the selected muscle. Depth testing / occlusion will handle the
+      // far side when the model is rotated.
+      mesh.visible=p.muscle===selected.muscle;
+      return;
+    }
+
+    mesh.visible=pointVisibleForView(p);
   });
+
   document.querySelector("#showAllPoints").classList.toggle("active",filterMode==="all");
   document.querySelector("#focusSelection").classList.toggle("active",filterMode==="selected");
 }
@@ -1172,7 +1178,8 @@ function animate(){
   markerMeshes.forEach((m,i)=>{
     const pulse=1+Math.sin(performance.now()/620+i)*.025;
     const profileScale=(currentView==="left" || currentView==="right") ? .78 : 1;
-    m.scale.setScalar(pulse*profileScale);
+    const selectionScale=(filterMode==="selected" && selected && m.userData.point.muscle===selected.muscle) ? 1.22 : 1;
+    m.scale.setScalar(pulse*profileScale*selectionScale);
   });
 
   renderer.render(scene,camera);
