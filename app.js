@@ -54,22 +54,22 @@ const anatomicalRegions={
   "Élévateur de la scapula":{y:.78,z:.14,spanY:.14,spanX:.11,spanZ:.08},
   "Grand pectoral":         {y:.69,z:.86,spanY:.18,spanX:.20,spanZ:.09},
   "Carré des lombes":       {y:.51,z:.16,spanY:.16,spanX:.12,spanZ:.10},
-  "Moyen fessier":          {y:.38,z:.16,spanY:.14,spanX:.10,spanZ:.11,xLeft:.40,xRight:.60},
-  "Piriforme":              {y:.34,z:.15,spanY:.09,spanX:.09,spanZ:.09,xLeft:.44,xRight:.56},
-  "Ischio-jambiers":        {y:.23,z:.14,spanY:.22,spanX:.09,spanZ:.09,xLeft:.40,xRight:.60},
-  "Gastrocnémien":          {y:.09,z:.14,spanY:.17,spanX:.08,spanZ:.08,xLeft:.39,xRight:.61},
-  "Tibial antérieur":       {y:.09,z:.84,spanY:.18,spanX:.08,spanZ:.08,xLeft:.39,xRight:.61},
-  "Deltoïde":                {y:.72,z:.50,spanY:.13,spanX:.08,spanZ:.20,xLeft:.27,xRight:.73},
-  "Grand dorsal":            {y:.58,z:.18,spanY:.22,spanX:.12,spanZ:.10,xLeft:.39,xRight:.61},
+  "Moyen fessier":          {y:.38,z:.16,spanY:.14,spanX:.10,spanZ:.11,xLeft:.60,xRight:.40},
+  "Piriforme":              {y:.34,z:.15,spanY:.09,spanX:.09,spanZ:.09,xLeft:.56,xRight:.44},
+  "Ischio-jambiers":        {y:.23,z:.14,spanY:.22,spanX:.09,spanZ:.09,xLeft:.60,xRight:.40},
+  "Gastrocnémien":          {y:.09,z:.14,spanY:.17,spanX:.08,spanZ:.08,xLeft:.61,xRight:.39},
+  "Tibial antérieur":       {y:.09,z:.84,spanY:.18,spanX:.08,spanZ:.08,xLeft:.61,xRight:.39},
+  "Deltoïde":                {y:.72,z:.50,spanY:.13,spanX:.08,spanZ:.20,xLeft:.73,xRight:.27},
+  "Grand dorsal":            {y:.58,z:.18,spanY:.22,spanX:.12,spanZ:.10,xLeft:.61,xRight:.39},
   "Rhomboïdes":              {y:.67,z:.14,spanY:.15,spanX:.14,spanZ:.08},
-  "Grand fessier":           {y:.34,z:.15,spanY:.18,spanX:.10,spanZ:.11,xLeft:.42,xRight:.58},
-  "Petit fessier":           {y:.40,z:.28,spanY:.12,spanX:.09,spanZ:.12,xLeft:.40,xRight:.60},
-  "Soléaire":                {y:.08,z:.15,spanY:.19,spanX:.08,spanZ:.08,xLeft:.39,xRight:.61},
+  "Grand fessier":           {y:.34,z:.15,spanY:.18,spanX:.10,spanZ:.11,xLeft:.58,xRight:.42},
+  "Petit fessier":           {y:.40,z:.28,spanY:.12,spanX:.09,spanZ:.12,xLeft:.60,xRight:.40},
+  "Soléaire":                {y:.08,z:.15,spanY:.19,spanX:.08,spanZ:.08,xLeft:.61,xRight:.39},
   "Psoas-iliaque":           {y:.48,z:.62,spanY:.18,spanX:.10,spanZ:.16},
-  "Adducteurs":              {y:.25,z:.55,spanY:.22,spanX:.08,spanZ:.12,xLeft:.43,xRight:.57},
-  "Droit fémoral":           {y:.24,z:.82,spanY:.22,spanX:.08,spanZ:.09,xLeft:.40,xRight:.60},
-  "Vaste latéral":           {y:.23,z:.68,spanY:.23,spanX:.08,spanZ:.13,xLeft:.37,xRight:.63},
-  "Tenseur du fascia lata":  {y:.36,z:.58,spanY:.11,spanX:.08,spanZ:.12,xLeft:.35,xRight:.65},
+  "Adducteurs":              {y:.25,z:.55,spanY:.22,spanX:.08,spanZ:.12,xLeft:.57,xRight:.43},
+  "Droit fémoral":           {y:.24,z:.82,spanY:.22,spanX:.08,spanZ:.09,xLeft:.60,xRight:.40},
+  "Vaste latéral":           {y:.23,z:.68,spanY:.23,spanX:.08,spanZ:.13,xLeft:.63,xRight:.37},
+  "Tenseur du fascia lata":  {y:.36,z:.58,spanY:.11,spanX:.08,spanZ:.12,xLeft:.65,xRight:.35},
   "Scalènes":                {y:.84,z:.54,spanY:.12,spanX:.09,spanZ:.15},
   "Temporal":                {y:.94,z:.60,spanY:.07,spanX:.09,spanZ:.14}
 };
@@ -119,8 +119,8 @@ function regionLocalPoint(point){
   const size=new THREE.Vector3();
   bodyLocalBox.getSize(size);
 
-  const defaultLeft=.43;
-  const defaultRight=.57;
+  const defaultLeft=.57;
+  const defaultRight=.43;
   const sideCenter=point.side==="gauche" ? (r.xLeft ?? defaultLeft) : (r.xRight ?? defaultRight);
   const a=point.anchor || [.5,.5,.5];
 
@@ -400,8 +400,8 @@ function projectPointOnSurface(anchorWorld, meshes, view, side=null){
         const bodyCenterX=(bodyLocalBox.min.x+bodyLocalBox.max.x)/2;
         const hitLocal=anatomyRoot.worldToLocal(hit.point.clone());
 
-        if(side==="gauche" && hitLocal.x>bodyCenterX) sidePenalty=2.0;
-        if(side==="droit" && hitLocal.x<bodyCenterX) sidePenalty=2.0;
+        if(side==="gauche" && hitLocal.x<bodyCenterX) sidePenalty=2.0;
+        if(side==="droit" && hitLocal.x>bodyCenterX) sidePenalty=2.0;
       }
 
       const score=d+sidePenalty;
@@ -468,8 +468,8 @@ function projectRegionPointOnBody(anchorWorld, view, side){
   }
 
   // Side-aware fallback rays.
-  const xBias = side==="gauche" ? bodyBox.min.x-margin : bodyBox.max.x+margin;
-  const xDir  = side==="gauche" ? new THREE.Vector3(1,0,0) : new THREE.Vector3(-1,0,0);
+  const xBias = side==="gauche" ? bodyBox.max.x+margin : bodyBox.min.x-margin;
+  const xDir  = side==="gauche" ? new THREE.Vector3(-1,0,0) : new THREE.Vector3(1,0,0);
   add(new THREE.Vector3(xBias,anchorWorld.y,anchorWorld.z),xDir);
 
   // General front/back fallbacks.
@@ -497,8 +497,8 @@ function projectRegionPointOnBody(anchorWorld, view, side){
       if(side && bodyLocalBox){
         const bodyCenterX=(bodyLocalBox.min.x+bodyLocalBox.max.x)/2;
         const localHit=anatomyRoot.worldToLocal(hit.point.clone());
-        if(side==="gauche" && localHit.x>bodyCenterX) sidePenalty=2.0;
-        if(side==="droit" && localHit.x<bodyCenterX) sidePenalty=2.0;
+        if(side==="gauche" && localHit.x<bodyCenterX) sidePenalty=2.0;
+        if(side==="droit" && localHit.x>bodyCenterX) sidePenalty=2.0;
       }
 
       const score=dy*2 + dx + dz*.35 + sidePenalty;
