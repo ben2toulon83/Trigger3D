@@ -1,5 +1,5 @@
-const CACHE="trigger3d-navfeet-v8";
-const APP=["./","./index.html","./styles.css?v=navfeet8","./app.js?v=navfeet8","./data.js","./manifest.webmanifest","./icons/icon.svg"];
+const CACHE="trigger3d-navfeet-v9";
+const APP=["./","./index.html","./styles.css?v=navfeet9","./app.js?v=navfeet9","./data.js","./manifest.webmanifest","./icons/icon.svg"];
 self.addEventListener("install",event=>{
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(c=>c.addAll(APP)));
@@ -14,7 +14,7 @@ self.addEventListener("activate",event=>{
 self.addEventListener("fetch",event=>{
   if(event.request.method!=="GET") return;
   event.respondWith(
-    fetch(event.request).then(res=>{
+    fetch(event.request,{cache:"no-store"}).then(res=>{
       if(res&&res.ok&&event.request.url.startsWith(self.location.origin)){
         const copy=res.clone();
         caches.open(CACHE).then(c=>c.put(event.request,copy));
