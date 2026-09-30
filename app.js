@@ -262,7 +262,7 @@ function resolvePointMeshes(point){
 }
 
 
-function projectPointOnSurface(anchorWorld, meshes, view){
+function projectPointOnSurface(anchorWorld, meshes, view, side=null){
   if(!meshes || !meshes.length) return anchorWorld.clone();
 
   const box=new THREE.Box3();
@@ -335,12 +335,23 @@ function projectPointOnSurface(anchorWorld, meshes, view){
     const hits=ray.intersectObjects(meshes,false);
     if(!hits.length) continue;
 
-    const hit=hits[0];
-    const d=hit.point.distanceTo(anchorWorld);
+    for(const hit of hits.slice(0,6)){
+      const d=hit.point.distanceTo(anchorWorld);
 
-    if(d<bestDistance){
-      bestDistance=d;
-      bestHit=hit;
+      let sidePenalty=0;
+      if(side && bodyLocalBox){
+        const bodyCenterX=(bodyLocalBox.min.x+bodyLocalBox.max.x)/2;
+        const hitLocal=anatomyRoot.worldToLocal(hit.point.clone());
+
+        if(side==="gauche" && hitLocal.x>bodyCenterX) sidePenalty=2.0;
+        if(side==="droit" && hitLocal.x<bodyCenterX) sidePenalty=2.0;
+      }
+
+      const score=d+sidePenalty;
+      if(score<bestDistance){
+        bestDistance=score;
+        bestHit=hit;
+      }
     }
   }
 
@@ -424,7 +435,16 @@ function projectRegionPointOnBody(anchorWorld, view, side){
       const dy=Math.abs(hit.point.y-anchorWorld.y);
       const dx=Math.abs(hit.point.x-anchorWorld.x);
       const dz=Math.abs(hit.point.z-anchorWorld.z);
-      const score=dy*2 + dx + dz*.35;
+
+      let sidePenalty=0;
+      if(side && bodyLocalBox){
+        const bodyCenterX=(bodyLocalBox.min.x+bodyLocalBox.max.x)/2;
+        const localHit=anatomyRoot.worldToLocal(hit.point.clone());
+        if(side==="gauche" && localHit.x>bodyCenterX) sidePenalty=2.0;
+        if(side==="droit" && localHit.x<bodyCenterX) sidePenalty=2.0;
+      }
+
+      const score=dy*2 + dx + dz*.35 + sidePenalty;
       if(score<bestScore){
         bestScore=score;
         bestHit=hit;
@@ -482,21 +502,12 @@ function rebuildMarkers(){
     const matched=matchMuscle(p);
 
     if(matched.length){
-      const box=new THREE.Box3();
-      matched.forEach(m=>box.expandByObject(m));
-
-      const size=new THREE.Vector3();
-      box.getSize(size);
-
-      const a=p.anchor || [0.5,0.5,0.5];
-
-      const anchorPoint=new THREE.Vector3(
-        box.min.x + size.x*a[0],
-        box.min.y + size.y*a[1],
-        box.min.z + size.z*a[2]
-      );
-
-      worldPos.copy(projectPointOnSurface(anchorPoint,matched,p.view));
+      // IMPORTANT: seed the ray from the side-specific anatomical region.
+      // Some source meshes contain both left and right muscles in one object;
+      // deriving the anchor from that combined bounding box would incorrectly
+      // place points near the midline between the legs.
+      const anchorPoint=regionWorldPoint(p);
+      worldPos.copy(projectPointOnSurface(anchorPoint,matched,p.view,p.side));
     } else {
       // When the muscle name is not available in the GLB, never leave
       // the regional anchor floating in space: snap it to the visible body surface.
