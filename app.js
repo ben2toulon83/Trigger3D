@@ -37,6 +37,7 @@ let filterMode="all";
 let targetRotX=-0.05, targetRotY=0, rotX=-0.05, rotY=0;
 let cameraTarget=new THREE.Vector3(0,0.25,0);
 let cameraTargetGoal=cameraTarget.clone();
+let userPanOffset=new THREE.Vector3(0,0,0);
 let cameraDistance=5.2;
 let cameraDistanceGoal=5.2;
 let pendingFocusMeshes=null;
@@ -501,17 +502,19 @@ function rebuildMarkers(){
     let worldPos=regionWorldPoint(p);
     const matched=matchMuscle(p);
 
-    if(matched.length){
-      // IMPORTANT: seed the ray from the side-specific anatomical region.
-      // Some source meshes contain both left and right muscles in one object;
-      // deriving the anchor from that combined bounding box would incorrectly
-      // place points near the midline between the legs.
-      const anchorPoint=regionWorldPoint(p);
+    const anchorPoint=regionWorldPoint(p);
+
+    if(p.view==="left" || p.view==="right"){
+      // Profile trigger points are projected against the complete body surface.
+      // This is more robust than using a bilateral muscle mesh whose bounding box
+      // may span both sides of the body.
+      worldPos.copy(projectRegionPointOnBody(anchorPoint,p.view,p.side));
+    } else if(matched.length){
       worldPos.copy(projectPointOnSurface(anchorPoint,matched,p.view,p.side));
     } else {
       // When the muscle name is not available in the GLB, never leave
       // the regional anchor floating in space: snap it to the visible body surface.
-      worldPos.copy(projectRegionPointOnBody(worldPos,p.view,p.side));
+      worldPos.copy(projectRegionPointOnBody(anchorPoint,p.view,p.side));
     }
 
     // Box3 returns world coordinates. Convert them back into the local
@@ -569,6 +572,7 @@ function highlightMeshes(meshes){
 }
 function focusOnMeshes(meshes){
   if(!meshes.length) return;
+  userPanOffset.set(0,0,0);
   const box=new THREE.Box3();
   meshes.forEach(m=>box.expandByObject(m));
   const sphere=new THREE.Sphere();
@@ -578,6 +582,7 @@ function focusOnMeshes(meshes){
   highlightMeshes(meshes);
 }
 function focusPoint(point){
+  userPanOffset.set(0,0,0);
   const meshes=resolvePointMeshes(point);
   if(meshes.length){
     focusOnMeshes(meshes);
@@ -620,6 +625,7 @@ function fitWholeBody(){
     const center=new THREE.Vector3();
     box.getCenter(center);
     cameraTargetGoal.copy(center);
+    cameraTargetGoal.x += 0.10;
   } else {
     cameraTargetGoal.set(0,.15,0);
   }
@@ -651,10 +657,11 @@ function focusBodyBand(name){
   resetHighlights();
 
   cameraTargetGoal.set(
-    center.x,
+    center.x + 0.10,
     box.min.y + size.y*p.y,
     center.z
   );
+  userPanOffset.set(0,0,0);
 
   cameraDistanceGoal = name==="whole"
     ? wholeBodyFitDistance()
@@ -662,6 +669,7 @@ function focusBodyBand(name){
 }
 
 function resetCamera(){
+  userPanOffset.set(0,0,0);
   focusBodyBand("whole");
 }
 
@@ -782,15 +790,74 @@ document.querySelector("#statMuscles").textContent=String(muscles.length);
 
 const raycaster=new THREE.Raycaster(); const pointer=new THREE.Vector2();
 let dragging=false,lastX=0,lastY=0,downX=0,downY=0;
+let dragMode="rotate";
+
+function pointerToNDC(e){
+  const rect=renderer.domElement.getBoundingClientRect();
+  pointer.x=((e.clientX-rect.left)/rect.width)*2-1;
+  pointer.y=-((e.clientY-rect.top)/rect.height)*2+1;
+  return rect;
+}
+
 renderer.domElement.style.touchAction="none";
-renderer.domElement.addEventListener("pointerdown",e=>{dragging=true;lastX=downX=e.clientX;lastY=downY=e.clientY;renderer.domElement.setPointerCapture(e.pointerId);});
-renderer.domElement.addEventListener("pointermove",e=>{if(!dragging)return;targetRotY+=(e.clientX-lastX)*.009;targetRotX+=(e.clientY-lastY)*.005;targetRotX=Math.max(-.45,Math.min(.45,targetRotX));lastX=e.clientX;lastY=e.clientY;});
+renderer.domElement.style.cursor="grab";
+
+renderer.domElement.addEventListener("pointerdown",e=>{
+  dragging=true;
+  lastX=downX=e.clientX;
+  lastY=downY=e.clientY;
+
+  pointerToNDC(e);
+  raycaster.setFromCamera(pointer,camera);
+
+  // Clicking directly on the anatomical model means "grab and move it".
+  // Clicking the empty background keeps the familiar rotation behaviour.
+  const bodyHit=raycaster.intersectObjects(anatomyMeshes,false)[0];
+  dragMode=bodyHit ? "pan" : "rotate";
+
+  renderer.domElement.style.cursor=dragMode==="pan" ? "grabbing" : "grabbing";
+  renderer.domElement.setPointerCapture(e.pointerId);
+});
+
+renderer.domElement.addEventListener("pointermove",e=>{
+  if(!dragging)return;
+
+  const dx=e.clientX-lastX;
+  const dy=e.clientY-lastY;
+
+  if(dragMode==="pan"){
+    const scale=Math.max(.0015,cameraDistance*.00075);
+    const right=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
+    const up=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
+
+    const delta=new THREE.Vector3()
+      .addScaledVector(right,-dx*scale)
+      .addScaledVector(up,dy*scale);
+
+    userPanOffset.add(delta);
+
+    // Limit panning so the body cannot disappear completely.
+    userPanOffset.x=THREE.MathUtils.clamp(userPanOffset.x,-1.6,1.6);
+    userPanOffset.y=THREE.MathUtils.clamp(userPanOffset.y,-1.8,1.8);
+
+    cameraTargetGoal.add(delta);
+  } else {
+    targetRotY+=dx*.009;
+    targetRotX+=dy*.005;
+    targetRotX=Math.max(-.45,Math.min(.45,targetRotX));
+  }
+
+  lastX=e.clientX;
+  lastY=e.clientY;
+});
+
 renderer.domElement.addEventListener("pointerup",e=>{
   dragging=false;
+  renderer.domElement.style.cursor="grab";
   targetRotY=Math.atan2(Math.sin(targetRotY),Math.cos(targetRotY));
   try{renderer.domElement.releasePointerCapture(e.pointerId);}catch{}
   if(Math.hypot(e.clientX-downX,e.clientY-downY)>5)return;
-  const rect=renderer.domElement.getBoundingClientRect(); pointer.x=((e.clientX-rect.left)/rect.width)*2-1; pointer.y=-((e.clientY-rect.top)/rect.height)*2+1;
+  pointerToNDC(e);
   raycaster.setFromCamera(pointer,camera);
   const markerHit=raycaster.intersectObjects(markerMeshes,false)[0];
   if(markerHit){selectPoint(markerHit.object.userData.point,true);return;}
@@ -874,6 +941,7 @@ function animate(){
     selectedMuscleMeshes.forEach(m=>box.expandByObject(m));
     const c=new THREE.Vector3();
     box.getCenter(c);
+    c.add(userPanOffset);
     cameraTargetGoal.lerp(c,.35);
   }
 
