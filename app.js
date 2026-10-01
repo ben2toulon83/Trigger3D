@@ -1077,21 +1077,19 @@ function pointerToNDC(e){
 
 renderer.domElement.style.touchAction="none";
 renderer.domElement.style.cursor="grab";
+renderer.domElement.addEventListener("contextmenu",e=>e.preventDefault());
 
 renderer.domElement.addEventListener("pointerdown",e=>{
   dragging=true;
   lastX=downX=e.clientX;
   lastY=downY=e.clientY;
 
-  pointerToNDC(e);
-  raycaster.setFromCamera(pointer,camera);
+  // Simple desktop interaction:
+  // - left drag anywhere = rotate
+  // - Shift + left drag OR right/middle drag = move/pan
+  dragMode=(e.shiftKey || e.button===1 || e.button===2) ? "pan" : "rotate";
 
-  // Clicking directly on the anatomical model means "grab and move it".
-  // Clicking the empty background keeps the familiar rotation behaviour.
-  const bodyHit=raycaster.intersectObjects(anatomyMeshes,false)[0];
-  dragMode=bodyHit ? "pan" : "rotate";
-
-  renderer.domElement.style.cursor=dragMode==="pan" ? "grabbing" : "grabbing";
+  renderer.domElement.style.cursor="grabbing";
   renderer.domElement.setPointerCapture(e.pointerId);
 });
 
@@ -1119,10 +1117,10 @@ renderer.domElement.addEventListener("pointermove",e=>{
     cameraTargetGoal.add(delta);
   } else {
     currentView="free";
-    targetRotY+=dx*.009;
-    targetRotX+=dy*.005;
+    targetRotY+=dx*.011;
+    targetRotX+=dy*.0065;
     updatePointVisibility();
-    targetRotX=Math.max(-.45,Math.min(.45,targetRotX));
+    targetRotX=Math.max(-.60,Math.min(.60,targetRotX));
   }
 
   lastX=e.clientX;
