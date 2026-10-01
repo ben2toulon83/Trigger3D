@@ -307,3 +307,11 @@ button{cursor:pointer}
   .panel{padding:10px}
   .tab{padding:8px 6px;font-size:12px}
 }
+
+/* Build 29 — OrbitControls + mobile declutter */
+@media(max-width:600px){
+  .legend{display:none}
+  #buildBadge{opacity:.72}
+  .quick-toggles{top:6px}
+  .viewer-card{height:74svh;min-height:74svh}
+}
