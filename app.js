@@ -1065,8 +1065,16 @@ document.querySelector("#statPoints").textContent=String(triggerPoints.length);
 document.querySelector("#statMuscles").textContent=String(muscles.length);
 
 const raycaster=new THREE.Raycaster(); const pointer=new THREE.Vector2();
-let dragging=false,lastX=0,lastY=0,downX=0,downY=0;
+
+const activePointers=new Map();
 let dragMode="rotate";
+let downX=0,downY=0;
+let lastTapTime=0;
+let gestureStartDistance=0;
+let gestureStartCameraDistance=0;
+let gestureStartMid=null;
+let rotationVelocityX=0;
+let rotationVelocityY=0;
 
 function pointerToNDC(e){
   const rect=renderer.domElement.getBoundingClientRect();
@@ -1075,107 +1083,183 @@ function pointerToNDC(e){
   return rect;
 }
 
+function panByPixels(dx,dy){
+  const scale=Math.max(.0012,cameraDistance*.00072);
+  const right=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
+  const up=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
+
+  const delta=new THREE.Vector3()
+    .addScaledVector(right,-dx*scale)
+    .addScaledVector(up,dy*scale);
+
+  userPanOffset.add(delta);
+  userPanOffset.x=THREE.MathUtils.clamp(userPanOffset.x,-1.35,1.35);
+  userPanOffset.y=THREE.MathUtils.clamp(userPanOffset.y,-1.45,1.45);
+  cameraTargetGoal.add(delta);
+}
+
+function pointerMidAndDistance(){
+  const pts=[...activePointers.values()];
+  if(pts.length<2) return null;
+  const a=pts[0],b=pts[1];
+  return {
+    mid:{x:(a.x+b.x)/2,y:(a.y+b.y)/2},
+    distance:Math.hypot(b.x-a.x,b.y-a.y)
+  };
+}
+
 renderer.domElement.style.touchAction="none";
 renderer.domElement.style.cursor="grab";
 renderer.domElement.addEventListener("contextmenu",e=>e.preventDefault());
 
 renderer.domElement.addEventListener("pointerdown",e=>{
-  dragging=true;
-  lastX=downX=e.clientX;
-  lastY=downY=e.clientY;
+  activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY,prevX:e.clientX,prevY:e.clientY});
+  downX=e.clientX;
+  downY=e.clientY;
 
-  // Simple desktop interaction:
-  // - left drag anywhere = rotate
-  // - Shift + left drag OR right/middle drag = move/pan
-  dragMode=(e.shiftKey || e.button===1 || e.button===2) ? "pan" : "rotate";
+  try{renderer.domElement.setPointerCapture(e.pointerId);}catch{}
+
+  if(activePointers.size===1){
+    dragMode=(e.shiftKey || e.button===1 || e.button===2) ? "pan" : "rotate";
+    rotationVelocityX=0;
+    rotationVelocityY=0;
+  }else if(activePointers.size===2){
+    dragMode="gesture";
+    const g=pointerMidAndDistance();
+    if(g){
+      gestureStartDistance=Math.max(g.distance,1);
+      gestureStartCameraDistance=cameraDistanceGoal;
+      gestureStartMid={...g.mid};
+    }
+  }
 
   renderer.domElement.style.cursor="grabbing";
-  renderer.domElement.setPointerCapture(e.pointerId);
 });
 
 renderer.domElement.addEventListener("pointermove",e=>{
-  if(!dragging)return;
+  const p=activePointers.get(e.pointerId);
+  if(!p) return;
 
-  const dx=e.clientX-lastX;
-  const dy=e.clientY-lastY;
+  p.prevX=p.x; p.prevY=p.y;
+  p.x=e.clientX; p.y=e.clientY;
 
-  if(dragMode==="pan"){
-    const scale=Math.max(.0015,cameraDistance*.00075);
-    const right=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
-    const up=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
+  if(activePointers.size>=2){
+    const g=pointerMidAndDistance();
+    if(!g || !gestureStartMid) return;
 
-    const delta=new THREE.Vector3()
-      .addScaledVector(right,-dx*scale)
-      .addScaledVector(up,dy*scale);
+    // Pinch zoom.
+    const ratio=gestureStartDistance/Math.max(g.distance,1);
+    cameraDistanceGoal=THREE.MathUtils.clamp(gestureStartCameraDistance*ratio,.75,10);
 
-    userPanOffset.add(delta);
-
-    // Limit panning so the body cannot disappear completely.
-    userPanOffset.x=THREE.MathUtils.clamp(userPanOffset.x,-1.6,1.6);
-    userPanOffset.y=THREE.MathUtils.clamp(userPanOffset.y,-1.8,1.8);
-
-    cameraTargetGoal.add(delta);
-  } else {
-    currentView="free";
-    targetRotY+=dx*.011;
-    targetRotX+=dy*.0065;
-    updatePointVisibility();
-    targetRotX=Math.max(-.60,Math.min(.60,targetRotX));
+    // Two-finger pan.
+    const dx=g.mid.x-gestureStartMid.x;
+    const dy=g.mid.y-gestureStartMid.y;
+    if(Math.abs(dx)>.2 || Math.abs(dy)>.2){
+      panByPixels(dx,dy);
+      gestureStartMid={...g.mid};
+    }
+    return;
   }
 
-  lastX=e.clientX;
-  lastY=e.clientY;
+  const dx=p.x-p.prevX;
+  const dy=p.y-p.prevY;
+
+  if(dragMode==="pan"){
+    panByPixels(dx,dy);
+    return;
+  }
+
+  // One finger / left mouse drag rotates immediately.
+  currentView="free";
+  const sensitivity=e.pointerType==="touch" ? .009 : .0105;
+  const verticalSensitivity=e.pointerType==="touch" ? .0065 : .0072;
+
+  targetRotY+=dx*sensitivity;
+  targetRotX+=dy*verticalSensitivity;
+  targetRotX=THREE.MathUtils.clamp(targetRotX,-.62,.62);
+
+  rotationVelocityY=dx*sensitivity;
+  rotationVelocityX=dy*verticalSensitivity;
+  updatePointVisibility();
 });
 
 renderer.domElement.addEventListener("pointerup",e=>{
-  dragging=false;
-  renderer.domElement.style.cursor="grab";
-  targetRotY=Math.atan2(Math.sin(targetRotY),Math.cos(targetRotY));
+  const moved=Math.hypot(e.clientX-downX,e.clientY-downY);
+  activePointers.delete(e.pointerId);
   try{renderer.domElement.releasePointerCapture(e.pointerId);}catch{}
-  if(Math.hypot(e.clientX-downX,e.clientY-downY)>5)return;
-  pointerToNDC(e);
-  raycaster.setFromCamera(pointer,camera);
-  const markerHit=raycaster.intersectObjects(markerMeshes,false)[0];
-  if(markerHit){selectPoint(markerHit.object.userData.point,true);return;}
-  const muscleHit=raycaster.intersectObjects(anatomyMeshes,false)[0];
-  if(muscleHit){
-    const mesh=muscleHit.object;
-    focusOnMeshes([mesh]);
 
-    const n=norm(mesh.name || mesh.userData?.za_name || "");
-    let matchedPoint=null;
-    for(const p of triggerPoints){
-      const aa=aliases[p.muscle]||[];
-      if(aa.some(a=>n.includes(norm(a)))){matchedPoint=p;break;}
-    }
+  if(activePointers.size===0){
+    renderer.domElement.style.cursor="grab";
+    targetRotY=Math.atan2(Math.sin(targetRotY),Math.cos(targetRotY));
 
-    // If mesh names do not match the atlas naming, select the nearest trigger
-    // point to the clicked anatomical structure instead.
-    if(!matchedPoint){
-      const box=new THREE.Box3().setFromObject(mesh);
-      const c=new THREE.Vector3(); box.getCenter(c);
-      let best=null, bestD=Infinity;
-      for(const p of triggerPoints){
-        const marker=markerByPointId.get(p.id);
-        if(!marker) continue;
-        const w=marker.getWorldPosition(new THREE.Vector3());
-        const d=w.distanceTo(c);
-        if(d<bestD){bestD=d;best=p;}
+    // Tap/click selection only when there was no meaningful drag.
+    if(moved<7){
+      pointerToNDC(e);
+      raycaster.setFromCamera(pointer,camera);
+
+      const markerHit=raycaster.intersectObjects(markerMeshes,false)[0];
+      if(markerHit){
+        selectPoint(markerHit.object.userData.point,true);
+        return;
       }
-      if(bestD < 0.45) matchedPoint=best;
-    }
 
-    if(matchedPoint) selectPoint(matchedPoint,false);
+      const muscleHit=raycaster.intersectObjects(anatomyMeshes,false)[0];
+      if(muscleHit){
+        const mesh=muscleHit.object;
+        const n=norm(mesh.name || mesh.userData?.za_name || "");
+        let matchedPoint=null;
+
+        for(const pnt of triggerPoints){
+          const aa=aliases[pnt.muscle]||[];
+          if(aa.some(a=>n.includes(norm(a)))){matchedPoint=pnt;break;}
+        }
+
+        if(!matchedPoint){
+          const box=new THREE.Box3().setFromObject(mesh);
+          const c=new THREE.Vector3(); box.getCenter(c);
+          let best=null,bestD=Infinity;
+          for(const pnt of triggerPoints){
+            const marker=markerByPointId.get(pnt.id);
+            if(!marker) continue;
+            const w=marker.getWorldPosition(new THREE.Vector3());
+            const d=w.distanceTo(c);
+            if(d<bestD){bestD=d;best=pnt;}
+          }
+          if(bestD<0.45) matchedPoint=best;
+        }
+
+        if(matchedPoint) selectPoint(matchedPoint,true);
+      }
+    }
+  }else if(activePointers.size===1){
+    const remaining=[...activePointers.values()][0];
+    remaining.prevX=remaining.x;
+    remaining.prevY=remaining.y;
+    dragMode="rotate";
   }
 });
+
+renderer.domElement.addEventListener("pointercancel",e=>{
+  activePointers.delete(e.pointerId);
+  if(activePointers.size===0){
+    renderer.domElement.style.cursor="grab";
+  }
+});
+
 renderer.domElement.addEventListener("dblclick",()=>{
+  leaveFocusMode();
+  currentView="front";
   targetRotY=0;
   targetRotX=-.05;
+  rotationVelocityX=0;
+  rotationVelocityY=0;
   resetCamera();
+  updatePointVisibility();
 });
+
 renderer.domElement.addEventListener("wheel",e=>{
   e.preventDefault();
-  cameraDistanceGoal=Math.max(.75,Math.min(10,cameraDistanceGoal+e.deltaY*.003));
+  cameraDistanceGoal=THREE.MathUtils.clamp(cameraDistanceGoal+e.deltaY*.0025,.75,10);
 },{passive:false});
 
 function resize(){
@@ -1202,9 +1286,20 @@ window.addEventListener("resize",resize);resize();
 function animate(){
   requestAnimationFrame(animate);
 
-  rotX+=(targetRotX-rotX)*.11;
+  // Faster damping keeps direct manipulation feeling connected to the pointer.
+  rotX+=(targetRotX-rotX)*.28;
   const dy=Math.atan2(Math.sin(targetRotY-rotY),Math.cos(targetRotY-rotY));
-  rotY+=dy*.11;
+  rotY+=dy*.28;
+
+  // Gentle inertia after release.
+  if(activePointers.size===0 && currentView==="free"){
+    rotationVelocityX*=.90;
+    rotationVelocityY*=.90;
+    if(Math.abs(rotationVelocityX)>.00005 || Math.abs(rotationVelocityY)>.00005){
+      targetRotX=THREE.MathUtils.clamp(targetRotX+rotationVelocityX*.45,-.62,.62);
+      targetRotY+=rotationVelocityY*.45;
+    }
+  }
   anatomyRoot.rotation.set(rotX,rotY,0);
   anatomyRoot.updateMatrixWorld(true);
 
@@ -1231,8 +1326,8 @@ function animate(){
     cameraTargetGoal.lerp(c,.35);
   }
 
-  cameraTarget.lerp(cameraTargetGoal,.12);
-  cameraDistance+=(cameraDistanceGoal-cameraDistance)*.12;
+  cameraTarget.lerp(cameraTargetGoal,.22);
+  cameraDistance+=(cameraDistanceGoal-cameraDistance)*.22;
   camera.position.set(cameraTarget.x,cameraTarget.y,cameraTarget.z+cameraDistance);
   camera.lookAt(cameraTarget);
 
