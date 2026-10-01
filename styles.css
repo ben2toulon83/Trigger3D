@@ -198,3 +198,112 @@ button{cursor:pointer}
   background:rgba(245,158,11,.10);
   border-color:rgba(245,158,11,.28);
 }
+
+/* Build 28 — interaction/mobile cleanup */
+@media(max-width:900px){
+  .topbar{
+    height:52px;
+    padding:8px 12px;
+    position:relative;
+  }
+  .brand{font-size:18px}
+  .layout{
+    display:block;
+    min-height:0;
+  }
+  .viewer-card{
+    min-height:68svh;
+    height:68svh;
+  }
+  .panel{
+    max-height:none;
+    padding:12px;
+    border-top:1px solid rgba(255,255,255,.09);
+  }
+  .tabs{
+    position:sticky;
+    top:0;
+    z-index:15;
+    background:rgba(10,15,29,.98);
+    padding:4px 0 8px;
+    margin-bottom:10px;
+  }
+  .legend{
+    top:8px;
+    left:8px;
+    gap:8px;
+    padding:6px 8px;
+    font-size:10px;
+  }
+  .quick-toggles{
+    top:8px;
+    right:8px;
+    gap:5px;
+  }
+  .quick-toggles .small{
+    padding:6px 7px;
+    font-size:10px;
+  }
+  .status-badge{
+    top:44px;
+    right:8px;
+    padding:5px 7px;
+    font-size:10px;
+  }
+  #buildBadge{
+    top:72px !important;
+    right:8px !important;
+    padding:4px 6px !important;
+    font-size:9px !important;
+  }
+  .viewer-tools{
+    left:8px;
+    right:8px;
+    bottom:8px;
+    top:auto;
+    transform:none;
+    display:flex;
+    flex-wrap:nowrap;
+    overflow-x:auto;
+    overflow-y:hidden;
+    width:auto;
+    max-width:none;
+    justify-content:flex-start;
+    gap:5px;
+    padding:6px;
+    border-radius:12px;
+    scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+  }
+  .viewer-tools::-webkit-scrollbar{display:none}
+  .viewer-tools button{
+    flex:0 0 auto;
+    min-width:auto;
+    padding:7px 9px;
+    font-size:10px;
+    border-radius:8px;
+    white-space:nowrap;
+  }
+  .tool-separator{
+    flex:0 0 1px;
+    width:1px;
+    height:24px;
+    margin:0 2px;
+  }
+  .viewer-hint{display:none!important}
+  .stats-row{margin-bottom:8px}
+  .stat-box{padding:8px 10px}
+  .stat-box strong{font-size:20px}
+  .info-grid{margin:12px 0;gap:8px}
+  .info-grid>div{padding:10px 11px}
+  .medical-note{margin-top:14px}
+}
+
+@media(max-width:520px){
+  .viewer-card{
+    min-height:72svh;
+    height:72svh;
+  }
+  .panel{padding:10px}
+  .tab{padding:8px 6px;font-size:12px}
+}
