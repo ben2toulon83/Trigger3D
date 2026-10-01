@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { DRACOLoader } from "three/addons/loaders/DRACOLoader.js";
 import { triggerPoints, painAreas } from "./data.js";
@@ -691,6 +692,7 @@ function highlightMeshes(meshes){
 }
 function focusOnMeshes(meshes){
   if(!meshes.length) return;
+  controlsMoved=false;
   userPanOffset.set(0,0,0);
   const box=new THREE.Box3();
   meshes.forEach(m=>box.expandByObject(m));
@@ -701,6 +703,7 @@ function focusOnMeshes(meshes){
   highlightMeshes(meshes);
 }
 function focusPoint(point){
+  controlsMoved=false;
   userPanOffset.set(0,0,0);
   if(!directHighlightMuscles.has(point.muscle)) resetHighlights();
   const meshes=resolvePointMeshes(point);
@@ -818,12 +821,14 @@ function focusBodyBand(name){
 
 function resetCamera(){
   userPanOffset.set(0,0,0);
+  controlsMoved=false;
   focusBodyBand("whole");
 }
 
 const viewAngles={front:0,back:Math.PI,left:-Math.PI/2,right:Math.PI/2};
 
 function schedulePointFocus(point){
+  controlsMoved=false;
   if(!point) return;
 
   resetHighlights();
@@ -1064,186 +1069,101 @@ muscles.forEach(name=>{
 document.querySelector("#statPoints").textContent=String(triggerPoints.length);
 document.querySelector("#statMuscles").textContent=String(muscles.length);
 
-const raycaster=new THREE.Raycaster(); const pointer=new THREE.Vector2();
+const raycaster=new THREE.Raycaster();
+const pointer=new THREE.Vector2();
 
-const activePointers=new Map();
-let dragMode="rotate";
-let downX=0,downY=0;
-let lastTapTime=0;
-let gestureStartDistance=0;
-let gestureStartCameraDistance=0;
-let gestureStartMid=null;
-let rotationVelocityX=0;
-let rotationVelocityY=0;
-
-function pointerToNDC(e){
-  const rect=renderer.domElement.getBoundingClientRect();
-  pointer.x=((e.clientX-rect.left)/rect.width)*2-1;
-  pointer.y=-((e.clientY-rect.top)/rect.height)*2+1;
-  return rect;
-}
-
-function panByPixels(dx,dy){
-  const scale=Math.max(.0012,cameraDistance*.00072);
-  const right=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion);
-  const up=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
-
-  const delta=new THREE.Vector3()
-    .addScaledVector(right,-dx*scale)
-    .addScaledVector(up,dy*scale);
-
-  userPanOffset.add(delta);
-  userPanOffset.x=THREE.MathUtils.clamp(userPanOffset.x,-1.35,1.35);
-  userPanOffset.y=THREE.MathUtils.clamp(userPanOffset.y,-1.45,1.45);
-  cameraTargetGoal.add(delta);
-}
-
-function pointerMidAndDistance(){
-  const pts=[...activePointers.values()];
-  if(pts.length<2) return null;
-  const a=pts[0],b=pts[1];
-  return {
-    mid:{x:(a.x+b.x)/2,y:(a.y+b.y)/2},
-    distance:Math.hypot(b.x-a.x,b.y-a.y)
-  };
-}
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;
+controls.dampingFactor=.085;
+controls.enablePan=true;
+controls.enableZoom=true;
+controls.enableRotate=true;
+controls.rotateSpeed=.72;
+controls.zoomSpeed=.9;
+controls.panSpeed=.8;
+controls.screenSpacePanning=true;
+controls.minDistance=.72;
+controls.maxDistance=10;
+controls.minPolarAngle=Math.PI*.22;
+controls.maxPolarAngle=Math.PI*.78;
+controls.target.copy(cameraTarget);
+controls.update();
 
 renderer.domElement.style.touchAction="none";
 renderer.domElement.style.cursor="grab";
 renderer.domElement.addEventListener("contextmenu",e=>e.preventDefault());
 
-renderer.domElement.addEventListener("pointerdown",e=>{
-  activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY,prevX:e.clientX,prevY:e.clientY});
-  downX=e.clientX;
-  downY=e.clientY;
+let clickStartX=0,clickStartY=0,controlsMoved=false;
 
-  try{renderer.domElement.setPointerCapture(e.pointerId);}catch{}
-
-  if(activePointers.size===1){
-    dragMode=(e.shiftKey || e.button===1 || e.button===2) ? "pan" : "rotate";
-    rotationVelocityX=0;
-    rotationVelocityY=0;
-  }else if(activePointers.size===2){
-    dragMode="gesture";
-    const g=pointerMidAndDistance();
-    if(g){
-      gestureStartDistance=Math.max(g.distance,1);
-      gestureStartCameraDistance=cameraDistanceGoal;
-      gestureStartMid={...g.mid};
-    }
-  }
-
+controls.addEventListener("start",()=>{
+  controlsMoved=false;
   renderer.domElement.style.cursor="grabbing";
 });
 
-renderer.domElement.addEventListener("pointermove",e=>{
-  const p=activePointers.get(e.pointerId);
-  if(!p) return;
-
-  p.prevX=p.x; p.prevY=p.y;
-  p.x=e.clientX; p.y=e.clientY;
-
-  if(activePointers.size>=2){
-    const g=pointerMidAndDistance();
-    if(!g || !gestureStartMid) return;
-
-    // Pinch zoom.
-    const ratio=gestureStartDistance/Math.max(g.distance,1);
-    cameraDistanceGoal=THREE.MathUtils.clamp(gestureStartCameraDistance*ratio,.75,10);
-
-    // Two-finger pan.
-    const dx=g.mid.x-gestureStartMid.x;
-    const dy=g.mid.y-gestureStartMid.y;
-    if(Math.abs(dx)>.2 || Math.abs(dy)>.2){
-      panByPixels(dx,dy);
-      gestureStartMid={...g.mid};
-    }
-    return;
-  }
-
-  const dx=p.x-p.prevX;
-  const dy=p.y-p.prevY;
-
-  if(dragMode==="pan"){
-    panByPixels(dx,dy);
-    return;
-  }
-
-  // One finger / left mouse drag rotates immediately.
+controls.addEventListener("change",()=>{
+  controlsMoved=true;
   currentView="free";
-  const sensitivity=e.pointerType==="touch" ? .009 : .0105;
-  const verticalSensitivity=e.pointerType==="touch" ? .0065 : .0072;
+});
 
-  targetRotY+=dx*sensitivity;
-  targetRotX+=dy*verticalSensitivity;
-  targetRotX=THREE.MathUtils.clamp(targetRotX,-.62,.62);
-
-  rotationVelocityY=dx*sensitivity;
-  rotationVelocityX=dy*verticalSensitivity;
+controls.addEventListener("end",()=>{
+  renderer.domElement.style.cursor="grab";
+  cameraTarget.copy(controls.target);
+  cameraTargetGoal.copy(controls.target);
+  cameraDistance=camera.position.distanceTo(controls.target);
+  cameraDistanceGoal=cameraDistance;
+  userPanOffset.set(0,0,0);
   updatePointVisibility();
 });
 
-renderer.domElement.addEventListener("pointerup",e=>{
-  const moved=Math.hypot(e.clientX-downX,e.clientY-downY);
-  activePointers.delete(e.pointerId);
-  try{renderer.domElement.releasePointerCapture(e.pointerId);}catch{}
-
-  if(activePointers.size===0){
-    renderer.domElement.style.cursor="grab";
-    targetRotY=Math.atan2(Math.sin(targetRotY),Math.cos(targetRotY));
-
-    // Tap/click selection only when there was no meaningful drag.
-    if(moved<7){
-      pointerToNDC(e);
-      raycaster.setFromCamera(pointer,camera);
-
-      const markerHit=raycaster.intersectObjects(markerMeshes,false)[0];
-      if(markerHit){
-        selectPoint(markerHit.object.userData.point,true);
-        return;
-      }
-
-      const muscleHit=raycaster.intersectObjects(anatomyMeshes,false)[0];
-      if(muscleHit){
-        const mesh=muscleHit.object;
-        const n=norm(mesh.name || mesh.userData?.za_name || "");
-        let matchedPoint=null;
-
-        for(const pnt of triggerPoints){
-          const aa=aliases[pnt.muscle]||[];
-          if(aa.some(a=>n.includes(norm(a)))){matchedPoint=pnt;break;}
-        }
-
-        if(!matchedPoint){
-          const box=new THREE.Box3().setFromObject(mesh);
-          const c=new THREE.Vector3(); box.getCenter(c);
-          let best=null,bestD=Infinity;
-          for(const pnt of triggerPoints){
-            const marker=markerByPointId.get(pnt.id);
-            if(!marker) continue;
-            const w=marker.getWorldPosition(new THREE.Vector3());
-            const d=w.distanceTo(c);
-            if(d<bestD){bestD=d;best=pnt;}
-          }
-          if(bestD<0.45) matchedPoint=best;
-        }
-
-        if(matchedPoint) selectPoint(matchedPoint,true);
-      }
-    }
-  }else if(activePointers.size===1){
-    const remaining=[...activePointers.values()][0];
-    remaining.prevX=remaining.x;
-    remaining.prevY=remaining.y;
-    dragMode="rotate";
-  }
+renderer.domElement.addEventListener("pointerdown",e=>{
+  clickStartX=e.clientX;
+  clickStartY=e.clientY;
 });
 
-renderer.domElement.addEventListener("pointercancel",e=>{
-  activePointers.delete(e.pointerId);
-  if(activePointers.size===0){
-    renderer.domElement.style.cursor="grab";
+renderer.domElement.addEventListener("pointerup",e=>{
+  const moved=Math.hypot(e.clientX-clickStartX,e.clientY-clickStartY);
+  if(moved>7 || controlsMoved) return;
+
+  const rect=renderer.domElement.getBoundingClientRect();
+  pointer.x=((e.clientX-rect.left)/rect.width)*2-1;
+  pointer.y=-((e.clientY-rect.top)/rect.height)*2+1;
+
+  raycaster.setFromCamera(pointer,camera);
+
+  const markerHit=raycaster.intersectObjects(markerMeshes,false)[0];
+  if(markerHit){
+    selectPoint(markerHit.object.userData.point,true);
+    return;
   }
+
+  const muscleHit=raycaster.intersectObjects(anatomyMeshes,false)[0];
+  if(!muscleHit) return;
+
+  const mesh=muscleHit.object;
+  const n=norm(mesh.name || mesh.userData?.za_name || "");
+  let matchedPoint=null;
+
+  for(const p of triggerPoints){
+    const aa=aliases[p.muscle]||[];
+    if(aa.some(a=>n.includes(norm(a)))){matchedPoint=p;break;}
+  }
+
+  if(!matchedPoint){
+    const box=new THREE.Box3().setFromObject(mesh);
+    const c=new THREE.Vector3(); box.getCenter(c);
+    let best=null,bestD=Infinity;
+
+    for(const p of triggerPoints){
+      const marker=markerByPointId.get(p.id);
+      if(!marker) continue;
+      const w=marker.getWorldPosition(new THREE.Vector3());
+      const d=w.distanceTo(c);
+      if(d<bestD){bestD=d;best=p;}
+    }
+    if(bestD<.45) matchedPoint=best;
+  }
+
+  if(matchedPoint) selectPoint(matchedPoint,true);
 });
 
 renderer.domElement.addEventListener("dblclick",()=>{
@@ -1251,22 +1171,19 @@ renderer.domElement.addEventListener("dblclick",()=>{
   currentView="front";
   targetRotY=0;
   targetRotX=-.05;
-  rotationVelocityX=0;
-  rotationVelocityY=0;
   resetCamera();
+  controls.target.copy(cameraTargetGoal);
+  camera.position.set(cameraTargetGoal.x,cameraTargetGoal.y,cameraTargetGoal.z+cameraDistanceGoal);
+  controls.update();
   updatePointVisibility();
 });
-
-renderer.domElement.addEventListener("wheel",e=>{
-  e.preventDefault();
-  cameraDistanceGoal=THREE.MathUtils.clamp(cameraDistanceGoal+e.deltaY*.0025,.75,10);
-},{passive:false});
 
 function resize(){
   const r=viewer.getBoundingClientRect();
   renderer.setSize(Math.max(1,r.width),Math.max(1,r.height),false);
   camera.aspect=Math.max(1,r.width)/Math.max(1,r.height);
   camera.updateProjectionMatrix();
+  if(typeof controls!=="undefined") controls.update();
   if(!selectedMuscleMeshes.length && !pendingFocusPoint){
     cameraDistanceGoal=wholeBodyFitDistance();
     if(userPanOffset.lengthSq()<1e-6){
@@ -1292,7 +1209,7 @@ function animate(){
   rotY+=dy*.28;
 
   // Gentle inertia after release.
-  if(activePointers.size===0 && currentView==="free"){
+  if(false){
     rotationVelocityX*=.90;
     rotationVelocityY*=.90;
     if(Math.abs(rotationVelocityX)>.00005 || Math.abs(rotationVelocityY)>.00005){
@@ -1326,10 +1243,22 @@ function animate(){
     cameraTargetGoal.lerp(c,.35);
   }
 
-  cameraTarget.lerp(cameraTargetGoal,.22);
-  cameraDistance+=(cameraDistanceGoal-cameraDistance)*.22;
-  camera.position.set(cameraTarget.x,cameraTarget.y,cameraTarget.z+cameraDistance);
-  camera.lookAt(cameraTarget);
+  // Programmatic focus/view buttons move the camera smoothly.
+  if(!controlsMoved){
+    cameraTarget.lerp(cameraTargetGoal,.20);
+    cameraDistance+=(cameraDistanceGoal-cameraDistance)*.20;
+
+    const desired=new THREE.Vector3(
+      cameraTarget.x,
+      cameraTarget.y,
+      cameraTarget.z+cameraDistance
+    );
+
+    camera.position.lerp(desired,.20);
+    controls.target.lerp(cameraTarget,.22);
+  }
+
+  controls.update();
 
   refreshDynamicMarkerVisibility();
 
